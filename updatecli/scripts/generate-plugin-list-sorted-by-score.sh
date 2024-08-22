@@ -12,9 +12,15 @@ tempDir=$(mktemp -d)
 # Ensure the temporary directory is removed on script exit
 trap 'rm -rf -- "$tempDir"' EXIT
 
-# Check if jq is installed
-if ! command -v jq &> /dev/null; then
-    error "jq could not be found. Please install jq to continue."
+# Validate the sort order parameter
+if [ "$#" -ne 1 ]; then
+    error "Usage: $0 <asc|desc>"
+    exit 1
+fi
+
+sort_order=$1
+if [ "$sort_order" != "asc" ] && [ "$sort_order" != "desc" ]; then
+    error "Invalid sort order: $sort_order. Use 'asc' or 'desc'."
     exit 1
 fi
 
@@ -84,9 +90,13 @@ debug "Number of plugins found in scores.formatted.json: $(wc -l < $tempDir/plug
 debug "Plugins with scores (10 first lines):"
 debug_head -n 10 "$tempDir/plugins_with_scores.txt"
 
-# Sort plugins_with_scores.txt by score in ascending order
-debug "Sorting plugins_with_scores.txt by score in ascending order..."
-sort -t ':' -k2 -n "$tempDir/plugins_with_scores.txt" > "$tempDir/sorted_plugins_with_scores.txt"
+# Sort plugins_with_scores.txt by score in the specified order
+debug "Sorting plugins_with_scores.txt by score in $sort_order order..."
+if [ "$sort_order" = "asc" ]; then
+  sort -t ':' -k2 -n "$tempDir/plugins_with_scores.txt" > "$tempDir/sorted_plugins_with_scores.txt"
+else
+  sort -t ':' -k2 -nr "$tempDir/plugins_with_scores.txt" > "$tempDir/sorted_plugins_with_scores.txt"
+fi
 
 # Re-order plugins_with_versions.txt based on sorted_plugins_with_scores.txt
 debug "Re-ordering plugins_with_versions.txt based on sorted_plugins_with_scores.txt..."
