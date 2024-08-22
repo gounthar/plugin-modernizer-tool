@@ -36,35 +36,26 @@ echo "Number of plugins found in update-center.actual.formatted.json: $(echo "$p
 echo "Plugins with versions:"
 echo "$plugins_with_versions"
 
-# Combine plugin names with scores using GNU Parallel
-echo "Combining plugin names and scores in parallel..."
-combined_data=$(printf "%s\n" "$plugins_with_versions" | parallel --no-notice --keep-order -j "$(nproc)" --colsep ':' '
+# Create two text files: one for plugin names and versions, another for plugin names and scores
+echo "Creating text files for plugin names and versions, and plugin names and scores..."
+printf "%s\n" "$plugins_with_versions" | parallel --no-notice --keep-order -j "$(nproc)" --colsep ':' '
   plugin_name="{1}"
   escaped_plugin_name="${plugin_name//\"/\\\"}"
+  version=$(jq -r ".plugins.\"$escaped_plugin_name\".versions[0].lastVersion" update-center.actual.formatted.json)
   score=$(jq -r ".plugins.\"$escaped_plugin_name\"?.value" scores.formatted.json)
-  echo "Plugin: $plugin_name, Score: $score" >&2
-  if [ -n "$score" ]; then
-    echo "$plugin_name:$score"
-  else
-    echo "No score found for plugin: $plugin_name" >&2
-  fi
-' | grep -v '^$')
+  echo "$plugin_name:$version" >> plugins_with_versions.txt
+  echo "$plugin_name:$score" >> plugins_with_scores.txt
+'
 
-if [ -z "$combined_data" ]; then
-  echo "No plugin names and scores were combined"
-  exit 1
-fi
+# Sort both files by plugin names
+echo "Sorting text files by plugin names..."
+sort -t ':' -k1,1 plugins_with_versions.txt > sorted_plugins_with_versions.txt
+sort -t ':' -k1,1 plugins_with_scores.txt > sorted_plugins_with_scores.txt
 
-# Print the combined data for debugging
-echo "Combined plugin names and scores:"
-echo "$combined_data"
+# Combine the sorted files and sort by score
+echo "Combining sorted files and sorting by score..."
+paste -d ':' sorted_plugins_with_versions.txt sorted_plugins_with_scores.txt | sort -t ':' -k4 -nr | cut -d ':' -f 1,2 > plugins.txt
 
-# Write combined data to temp-plugins.txt
-echo "Writing combined data to temp-plugins.txt..."
-printf "%s\n" "$combined_data" > temp-plugins.txt
-if [ $? -ne 0 ]; then
-  echo "Failed to write combined data to temp-plugins.txt"
-  exit 1
-fi
-echo "Contents of temp-plugins.txt:"
-cat temp-plugins.txt
+# Print the contents of plugins.txt
+echo "Contents of plugins.txt:"
+cat plugins.txt
