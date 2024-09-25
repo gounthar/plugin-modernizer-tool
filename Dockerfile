@@ -13,7 +13,7 @@ ENV VERSION=${VERSION}
 
 # Add the current directory to the /plugin-modernizer directory in the container
 ADD . /plugin-modernizer
-RUN mkdir -p /plugin-modernizer && lsb_release -a
+RUN mkdir -p /plugin-modernizer && cat /etc/os-release
 WORKDIR /plugin-modernizer
 
 # Define a build argument for the Maven cache location
