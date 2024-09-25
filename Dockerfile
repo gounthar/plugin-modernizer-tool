@@ -2,7 +2,7 @@
 ARG VERSION=999999-SNAPSHOT
 
 # First stage: Build the project using Maven and Eclipse Temurin JDK 21
-FROM maven:3.9.9-eclipse-temurin-21-jammy AS builder
+FROM maven:3.9.9-eclipse-temurin-21 AS builder
 
 # Re-define the VERSION argument for the builder stage
 ARG VERSION
@@ -13,7 +13,7 @@ ENV VERSION=${VERSION}
 
 # Add the current directory to the /plugin-modernizer directory in the container
 ADD . /plugin-modernizer
-RUN mkdir -p /plugin-modernizer
+RUN mkdir -p /plugin-modernizer && lsb_release -a
 WORKDIR /plugin-modernizer
 
 # Define a build argument for the Maven cache location
@@ -33,7 +33,7 @@ RUN cd /plugin-modernizer && \
     mvn clean install -DskipTests
 
 # Second stage: Create the final image using Maven and Eclipse Temurin JDK 21
-FROM maven:3.9.9-eclipse-temurin-21-jammy AS result-image
+FROM maven:3.9.9-eclipse-temurin-21 AS result-image
 
 LABEL org.opencontainers.image.description="Using OpenRewrite Recipes for Plugin Modernization or Automation Plugin Build Metadata Updates"
 
