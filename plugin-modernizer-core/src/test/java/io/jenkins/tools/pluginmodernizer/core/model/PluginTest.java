@@ -287,4 +287,16 @@ public class PluginTest {
         Marker actualMarker = plugin.getMarker();
         assertEquals(expectedMarker, actualMarker);
     }
+
+    @Test
+    public void testAddRelativePathIfMissing() {
+        Plugin plugin = Plugin.build("example");
+        plugin.withConfig(config);
+        doReturn(false).when(config).isFetchMetadataOnly();
+        plugin.withJDK(JDK.JAVA_21);
+        plugin.compile(mavenInvoker);
+        verify(mavenInvoker).addRelativePathIfMissing(plugin);
+        verify(mavenInvoker).invokeGoal(plugin, "compile");
+        verifyNoMoreInteractions(mavenInvoker);
+    }
 }

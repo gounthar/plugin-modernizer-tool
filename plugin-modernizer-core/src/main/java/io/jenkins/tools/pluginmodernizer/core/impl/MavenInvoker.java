@@ -16,6 +16,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
 import org.apache.maven.shared.invoker.DefaultInvoker;
@@ -26,6 +33,8 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.openrewrite.Recipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "false positive")
 public class MavenInvoker {
@@ -171,6 +180,7 @@ public class MavenInvoker {
      */
     private void invokeGoals(Plugin plugin, String... goals) {
         validatePom(plugin);
+        addRelativePathIfMissing(plugin);
         Invoker invoker = new DefaultInvoker();
         invoker.setMavenHome(config.getMavenHome().toFile());
         try {
@@ -280,6 +290,37 @@ public class MavenInvoker {
                 }
                 plugin.addError(errorMessage);
             }
+        }
+    }
+
+    /**
+     * Add the relative path to the pom.xml file if it is missing
+     * @param plugin The plugin to add the relative path to
+     */
+    private void addRelativePathIfMissing(Plugin plugin) {
+        Path pomPath = plugin.getLocalRepository().resolve("pom.xml");
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(pomPath.toFile());
+
+            if (document.getElementsByTagName("relativePath").getLength() == 0) {
+                Element parentElement = (Element) document.getElementsByTagName("parent").item(0);
+                Element relativePathElement = document.createElement("relativePath");
+                relativePathElement.appendChild(document.createTextNode("../pom.xml"));
+                parentElement.appendChild(relativePathElement);
+
+                TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                Transformer transformer = transformerFactory.newTransformer();
+                transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+                DOMSource source = new DOMSource(document);
+                StreamResult result = new StreamResult(pomPath.toFile());
+                transformer.transform(source, result);
+
+                LOG.info("Added relative path to pom.xml for plugin {}", plugin.getName());
+            }
+        } catch (Exception e) {
+            plugin.addError("Failed to add relative path to pom.xml", e);
         }
     }
 }
