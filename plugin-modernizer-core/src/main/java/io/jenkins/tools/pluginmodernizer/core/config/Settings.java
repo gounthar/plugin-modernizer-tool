@@ -64,6 +64,10 @@ public class Settings {
 
     public static final Recipe MINIMAL_BUILD_JAVA_8_RECIPE;
 
+    public static final String DEFAULT_PARENT_VERSION = "4.87";
+
+    public static final String DEFAULT_REPOSITORY_URL = "https://repo.jenkins-ci.org/public/";
+
     private Settings() {}
 
     static {

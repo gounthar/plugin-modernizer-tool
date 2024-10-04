@@ -282,4 +282,36 @@ public class MavenInvoker {
             }
         }
     }
+
+    /**
+     * Extract the parent version from the POM file.
+     * @param plugin The plugin to extract the parent version from
+     * @return The parent version
+     */
+    private String extractParentVersion(Plugin plugin) {
+        // Logic to extract parent version from POM file
+        // This is a placeholder, actual implementation needed
+        return "4.87";
+    }
+
+    /**
+     * Install the parent POM via Maven invoker.
+     * @param parentVersion The parent version to install
+     */
+    private void installParentPom(String parentVersion) {
+        try {
+            Invoker invoker = new DefaultInvoker();
+            invoker.setMavenHome(config.getMavenHome().toFile());
+            InvocationRequest request = new DefaultInvocationRequest();
+            request.setBatchMode(true);
+            request.setGoals(List.of("dependency:get"));
+            request.setProperties(System.getProperties());
+            request.addShellEnvironment("artifact", "org.jenkins-ci.plugins:plugin:" + parentVersion + ":pom");
+            request.addShellEnvironment("remoteRepositories", "https://repo.jenkins-ci.org/public/");
+            request.addShellEnvironment("transitive", "false");
+            invoker.execute(request);
+        } catch (MavenInvocationException e) {
+            LOG.error("Failed to install parent POM", e);
+        }
+    }
 }
