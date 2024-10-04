@@ -6,6 +6,7 @@ import io.jenkins.tools.pluginmodernizer.core.extractor.PluginMetadata;
 import io.jenkins.tools.pluginmodernizer.core.github.GHService;
 import io.jenkins.tools.pluginmodernizer.core.impl.CacheManager;
 import io.jenkins.tools.pluginmodernizer.core.impl.MavenInvoker;
+import io.jenkins.tools.pluginmodernizer.core.utils.PomModifier;
 import io.jenkins.tools.pluginmodernizer.core.utils.UpdateCenterUtils;
 import java.net.URI;
 import java.nio.file.Path;
@@ -734,6 +735,15 @@ public class Plugin {
             raiseLastError();
             return null;
         }
+    }
+
+    /**
+     * Save the modified pom.xml file
+     * @param pomFilePath The path to the pom.xml file
+     */
+    public void savePom(String pomFilePath) {
+        PomModifier pomModifier = new PomModifier(pomFilePath);
+        pomModifier.savePom(pomFilePath);
     }
 
     @Override

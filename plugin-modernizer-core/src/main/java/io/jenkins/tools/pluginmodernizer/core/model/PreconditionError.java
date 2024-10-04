@@ -4,6 +4,7 @@ import java.util.function.BiFunction;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import org.w3c.dom.Document;
+import io.jenkins.tools.pluginmodernizer.core.utils.PomModifier;
 
 /**
  * Enum to represent the precondition errors preventing any modernization process
@@ -78,7 +79,14 @@ public enum PreconditionError {
                     return false;
                 }
             },
-            "Missing relative path in pom file preventing parent download");
+            "Missing relative path in pom file preventing parent download") {
+                @Override
+                public void fix(String pomFilePath) {
+                    PomModifier pomModifier = new PomModifier(pomFilePath);
+                    pomModifier.addMissingRelativePath();
+                    pomModifier.savePom(pomFilePath);
+                }
+            };
 
     /**
      * Predicate to check if the flag is applicable for the given Document and XPath
@@ -115,5 +123,13 @@ public enum PreconditionError {
      */
     public String getError() {
         return error;
+    }
+
+    /**
+     * Fix the precondition error in the given pom file
+     * @param pomFilePath the path to the pom file
+     */
+    public void fix(String pomFilePath) {
+        // Default implementation does nothing
     }
 }
