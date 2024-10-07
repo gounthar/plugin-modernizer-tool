@@ -14,6 +14,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import com.google.inject.Guice;
+import io.jenkins.tools.pluginmodernizer.core.GuiceModule;
 import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.config.Settings;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
@@ -63,7 +65,7 @@ public class GHServiceTest {
         doReturn("fake-owner").when(config).getGithubOwner();
 
         // Create service
-        service = new GHService(config);
+        service = Guice.createInjector(new GuiceModule(config)).getInstance(GHService.class);
 
         // Set github mock
         Field field = ReflectionUtils.findFields(
@@ -258,6 +260,7 @@ public class GHServiceTest {
         GHMyself myself = Mockito.mock(GHMyself.class);
 
         // Mock
+        doReturn(repository).when(fork).getParent();
         doReturn("fake-repo").when(repository).getName();
         doReturn(Mockito.mock(URL.class)).when(fork).getHtmlUrl();
         doReturn(repository).when(plugin).getRemoteRepository(eq(service));
@@ -272,6 +275,28 @@ public class GHServiceTest {
         // Verify
         verify(repository, times(0)).fork();
         verify(myself, times(2)).getRepository(eq("fake-repo"));
+    }
+
+    @Test
+    public void shouldFailToGetForkWhenAlreadyForkedFromOtherSource() throws Exception {
+
+        GHRepository repository = Mockito.mock(GHRepository.class);
+        GHRepository other = Mockito.mock(GHRepository.class);
+        GHRepository fork = Mockito.mock(GHRepository.class);
+        GHMyself myself = Mockito.mock(GHMyself.class);
+
+        // Mock
+        doReturn(other).when(fork).getParent();
+        doReturn("fake-repo").when(repository).getName();
+        doReturn(repository).when(plugin).getRemoteRepository(eq(service));
+        doReturn(myself).when(github).getMyself();
+
+        // Already forked
+        doReturn(fork).when(myself).getRepository(eq("fake-repo"));
+
+        assertThrows(PluginProcessingException.class, () -> {
+            service.fork(plugin);
+        });
     }
 
     @Test
@@ -306,6 +331,7 @@ public class GHServiceTest {
         GHOrganization org = Mockito.mock(GHOrganization.class);
 
         // Mock
+        doReturn(repository).when(fork).getParent();
         doReturn("fake-repo").when(repository).getName();
         doReturn(Mockito.mock(URL.class)).when(fork).getHtmlUrl();
         doReturn(repository).when(plugin).getRemoteRepository(eq(service));
@@ -320,6 +346,29 @@ public class GHServiceTest {
         // Verify
         verify(repository, times(0)).forkTo(eq(org));
         verify(org, times(2)).getRepository(eq("fake-repo"));
+    }
+
+    @Test
+    public void shouldFailtToGetForkWhenAlreadyForkedToOrganisationOfOtherSource() throws Exception {
+
+        GHRepository repository = Mockito.mock(GHRepository.class);
+        GHRepository other = Mockito.mock(GHRepository.class);
+        GHRepository fork = Mockito.mock(GHRepository.class);
+        GHOrganization org = Mockito.mock(GHOrganization.class);
+
+        // Mock
+        doReturn(other).when(fork).getParent();
+        doReturn("fake-repo").when(repository).getName();
+        doReturn(repository).when(plugin).getRemoteRepository(eq(service));
+        doReturn(org).when(github).getOrganization("fake-owner");
+
+        // Already forked to org
+        doReturn(fork).when(org).getRepository(eq("fake-repo"));
+
+        // Test
+        assertThrows(PluginProcessingException.class, () -> {
+            service.fork(plugin);
+        });
     }
 
     @Test

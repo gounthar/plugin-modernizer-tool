@@ -25,8 +25,16 @@
       <artifactId>gson</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.google.inject</groupId>
+      <artifactId>guice</artifactId>
+    </dependency>
+    <dependency>
       <groupId>gg.jte</groupId>
       <artifactId>jte</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>jakarta.inject</groupId>
+      <artifactId>jakarta.inject-api</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -168,6 +176,7 @@
         <configuration>
           <environmentVariables>
             <GH_TOKEN>fake-token</GH_TOKEN>
+            <GH_TARGET_ORGANISATION>jenkinsci</GH_TARGET_ORGANISATION>
           </environmentVariables>
         </configuration>
         <executions>

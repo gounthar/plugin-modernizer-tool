@@ -9,10 +9,9 @@ import io.jenkins.tools.pluginmodernizer.core.model.JDK;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
 import io.jenkins.tools.pluginmodernizer.core.model.PluginProcessingException;
 import io.jenkins.tools.pluginmodernizer.core.utils.HealthScoreUtils;
-import io.jenkins.tools.pluginmodernizer.core.utils.JdkFetcher;
 import io.jenkins.tools.pluginmodernizer.core.utils.PluginVersionUtils;
-import io.jenkins.tools.pluginmodernizer.core.utils.PomModifier;
 import io.jenkins.tools.pluginmodernizer.core.utils.UpdateCenterUtils;
+import jakarta.inject.Inject;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.openrewrite.Recipe;
@@ -24,33 +23,26 @@ public class PluginModernizer {
 
     private static final Logger LOG = LoggerFactory.getLogger(PluginModernizer.class);
 
-    private final Config config;
+    @Inject
+    private Config config;
 
-    private final MavenInvoker mavenInvoker;
+    @Inject
+    private MavenInvoker mavenInvoker;
 
-    private final GHService ghService;
+    @Inject
+    private GHService ghService;
 
-    private final CacheManager cacheManager;
-
-    private final JdkFetcher jdkFetcher;
-
-    /**
-     * Create a new PluginModernizer
-     *
-     * @param config The configuration to use
-     */
-    public PluginModernizer(Config config) {
-        this.config = config;
-        this.jdkFetcher = new JdkFetcher(config.getCachePath());
-        this.mavenInvoker = new MavenInvoker(config, jdkFetcher);
-        this.ghService = new GHService(config);
-        this.cacheManager = new CacheManager(config.getCachePath());
-    }
+    @Inject
+    private CacheManager cacheManager;
 
     /**
      * Entry point to start the plugin modernization process
      */
     public void start() {
+
+        // Validate maven
+        mavenInvoker.validateMavenHome();
+        mavenInvoker.validateMavenVersion();
 
         // Setup
         this.ghService.connect();
@@ -83,7 +75,6 @@ public class PluginModernizer {
 
     /**
      * Process a plugin
-     *
      * @param plugin The plugin to process
      */
     private void process(Plugin plugin) {
@@ -137,7 +128,7 @@ public class PluginModernizer {
                     LOG.debug("Plugin {} compiled successfully with JDK {}", plugin.getName(), jdk.getMajor());
                 } else {
                     LOG.debug(
-                            "There are no metadata or we found precondition errors for plugin {}. Skipping initial compilation.",
+                            "No metadata or precondition errors found for plugin {}. Skipping initial compilation.",
                             plugin.getName());
                 }
             }
@@ -155,23 +146,6 @@ public class PluginModernizer {
                 LOG.debug("Metadata already computed for plugin {}. Using cached metadata.", plugin.getName());
             }
 
-            // Check for ignoreJdk7Error option and use PomModifier if set
-            if (config.isIgnoreJdk7Error() && plugin.hasPreconditionErrors()) {
-                LOG.info("Ignoring JDK7 error for plugin {} and modifying pom.xml", plugin.getName());
-                PomModifier pomModifier = new PomModifier(
-                        plugin.getLocalRepository().resolve("pom.xml").toString());
-                pomModifier.removeOffendingProperties();
-                pomModifier.addBom("io.jenkins.tools.bom", Settings.BOM_BASE, Settings.BOM_VERSION);
-                pomModifier.updateParentPom("org.jenkins-ci.plugins", "plugin", Settings.PLUGIN_PARENT_VERSION);
-                pomModifier.updateJenkinsMinimalVersion(Settings.JENKINS_VERSION);
-
-                pomModifier.savePom(
-                        plugin.getLocalRepository().resolve("pom.xml").toString());
-                plugin.withoutErrors();
-                // Retry the metadata fetching
-                plugin.collectMetadata(mavenInvoker);
-                plugin.moveMetadata(cacheManager);
-            } else
             // Abort here if we have errors
             if (plugin.hasErrors() || plugin.hasPreconditionErrors()) {
                 plugin.addPreconditionErrors(plugin.getMetadata());
@@ -236,7 +210,6 @@ public class PluginModernizer {
 
     /**
      * Compile a plugin
-     *
      * @param plugin The plugin to compile
      */
     private JDK compilePlugin(Plugin plugin) {
@@ -250,7 +223,6 @@ public class PluginModernizer {
 
     /**
      * Verify a plugin and return the first JDK that successfully verifies it, starting from the target JDK and moving backward
-     *
      * @param plugin The plugin to verify
      * @return The JDK that verifies the plugin
      */
@@ -290,7 +262,6 @@ public class PluginModernizer {
 
     /**
      * Collect results from the plugins and display a summary
-     *
      * @param plugins The plugins
      */
     private void printResults(List<Plugin> plugins) {

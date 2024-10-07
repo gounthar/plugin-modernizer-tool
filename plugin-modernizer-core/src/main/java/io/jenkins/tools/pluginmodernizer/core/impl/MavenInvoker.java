@@ -9,6 +9,7 @@ import io.jenkins.tools.pluginmodernizer.core.model.ModernizerException;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
 import io.jenkins.tools.pluginmodernizer.core.model.PluginProcessingException;
 import io.jenkins.tools.pluginmodernizer.core.utils.JdkFetcher;
+import jakarta.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,16 +17,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import org.apache.maven.artifact.versioning.ComparableVersion;
 import org.apache.maven.shared.invoker.DefaultInvocationRequest;
-import org.apache.maven.shared.invoker.DefaultInvoker;
 import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.Invoker;
@@ -33,8 +26,6 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.openrewrite.Recipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 @SuppressFBWarnings(value = "PATH_TRAVERSAL_IN", justification = "false positive")
 public class MavenInvoker {
@@ -47,24 +38,17 @@ public class MavenInvoker {
     /**
      * The configuration to use
      */
-    private final Config config;
+    @Inject
+    private Config config;
 
     /**
      * The JDK fetcher to use
      */
-    private final JdkFetcher jdkFetcher;
+    @Inject
+    private JdkFetcher jdkFetcher;
 
-    /**
-     * Create a new MavenInvoker
-     * @param config The configuration to use
-     * @param jdkFetcher The JDK fetcher to use
-     */
-    public MavenInvoker(Config config, JdkFetcher jdkFetcher) {
-        this.config = config;
-        this.jdkFetcher = jdkFetcher;
-        validateMavenHome();
-        validateMavenVersion();
-    }
+    @Inject
+    private Invoker invoker;
 
     /**
      * Get the maven version
@@ -73,9 +57,8 @@ public class MavenInvoker {
     public @Nullable ComparableVersion getMavenVersion() {
         AtomicReference<String> version = new AtomicReference<>();
         try {
-            Invoker invoker = new DefaultInvoker();
-            invoker.setMavenHome(config.getMavenHome().toFile());
             InvocationRequest request = new DefaultInvocationRequest();
+            request.setMavenHome(config.getMavenHome().toFile());
             request.setBatchMode(true);
             request.addArg("-q");
             request.addArg("--version");
@@ -180,9 +163,6 @@ public class MavenInvoker {
      */
     private void invokeGoals(Plugin plugin, String... goals) {
         validatePom(plugin);
-        addRelativePathIfMissing(plugin);
-        Invoker invoker = new DefaultInvoker();
-        invoker.setMavenHome(config.getMavenHome().toFile());
         try {
             InvocationRequest request = createInvocationRequest(plugin, goals);
             JDK jdk = plugin.getJDK();
@@ -222,7 +202,7 @@ public class MavenInvoker {
      * Validate the Maven home directory.
      * @throws IllegalArgumentException if the Maven home directory is not set or invalid.
      */
-    private void validateMavenHome() {
+    public void validateMavenHome() {
         Path mavenHome = config.getMavenHome();
         if (mavenHome == null) {
             LOG.error("Neither MAVEN_HOME nor M2_HOME environment variables are set.");
@@ -239,7 +219,7 @@ public class MavenInvoker {
      * Validate the Maven version.
      * @throws IllegalArgumentException if the Maven version is too old or cannot be determined.
      */
-    private void validateMavenVersion() {
+    public void validateMavenVersion() {
         ComparableVersion mavenVersion = getMavenVersion();
         LOG.debug("Maven version detected: {}", mavenVersion);
         if (mavenVersion == null) {
@@ -263,6 +243,7 @@ public class MavenInvoker {
      */
     private InvocationRequest createInvocationRequest(Plugin plugin, String... args) {
         InvocationRequest request = new DefaultInvocationRequest();
+        request.setMavenHome(config.getMavenHome().toFile());
         request.setPomFile(plugin.getLocalRepository().resolve("pom.xml").toFile());
         request.addArgs(List.of(args));
         if (config.isDebug()) {
@@ -290,37 +271,6 @@ public class MavenInvoker {
                 }
                 plugin.addError(errorMessage);
             }
-        }
-    }
-
-    /**
-     * Add the relative path to the pom.xml file if it is missing
-     * @param plugin The plugin to add the relative path to
-     */
-    public void addRelativePathIfMissing(Plugin plugin) {
-        Path pomPath = plugin.getLocalRepository().resolve("pom.xml");
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document document = builder.parse(pomPath.toFile());
-
-            if (document.getElementsByTagName("relativePath").getLength() == 0) {
-                Element parentElement = (Element) document.getElementsByTagName("parent").item(0);
-                Element relativePathElement = document.createElement("relativePath");
-                relativePathElement.appendChild(document.createTextNode("../pom.xml"));
-                parentElement.appendChild(relativePathElement);
-
-                TransformerFactory transformerFactory = TransformerFactory.newInstance();
-                Transformer transformer = transformerFactory.newTransformer();
-                transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-                DOMSource source = new DOMSource(document);
-                StreamResult result = new StreamResult(pomPath.toFile());
-                transformer.transform(source, result);
-
-                LOG.info("Added relative path to pom.xml for plugin {}", plugin.getName());
-            }
-        } catch (Exception e) {
-            plugin.addError("Failed to add relative path to pom.xml", e);
         }
     }
 }
