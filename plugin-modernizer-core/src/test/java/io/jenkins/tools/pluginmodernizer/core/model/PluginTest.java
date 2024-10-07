@@ -1,25 +1,21 @@
 package io.jenkins.tools.pluginmodernizer.core.model;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-
 import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.config.Settings;
 import io.jenkins.tools.pluginmodernizer.core.github.GHService;
 import io.jenkins.tools.pluginmodernizer.core.impl.MavenInvoker;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.slf4j.Marker;
 import org.slf4j.MarkerFactory;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PluginTest {
@@ -286,5 +282,20 @@ public class PluginTest {
         Marker expectedMarker = MarkerFactory.getMarker("example");
         Marker actualMarker = plugin.getMarker();
         assertEquals(expectedMarker, actualMarker);
+    }
+    @Captor
+    private ArgumentCaptor<Plugin> pluginCaptor;
+
+    @Test
+    public void testAddRelativePathIfMissing() {
+        Plugin plugin = Plugin.build("example");
+        plugin.withConfig(config);
+        doReturn(false).when(config).isFetchMetadataOnly();
+        plugin.withJDK(JDK.JAVA_21);
+        plugin.compile(mavenInvoker);
+
+        verify(mavenInvoker).invokeGoal(pluginCaptor.capture(), eq("compile"));
+        verify(mavenInvoker).addRelativePathIfMissing(pluginCaptor.getValue());
+        verifyNoMoreInteractions(mavenInvoker);
     }
 }
