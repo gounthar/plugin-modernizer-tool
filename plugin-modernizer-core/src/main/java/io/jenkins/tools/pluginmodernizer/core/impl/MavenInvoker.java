@@ -297,7 +297,7 @@ public class MavenInvoker {
      * Add the relative path to the pom.xml file if it is missing
      * @param plugin The plugin to add the relative path to
      */
-    private void addRelativePathIfMissing(Plugin plugin) {
+    public void addRelativePathIfMissing(Plugin plugin) {
         Path pomPath = plugin.getLocalRepository().resolve("pom.xml");
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
