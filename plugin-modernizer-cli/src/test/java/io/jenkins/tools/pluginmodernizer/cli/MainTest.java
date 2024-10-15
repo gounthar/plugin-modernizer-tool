@@ -293,4 +293,18 @@ public class MainTest {
         int exitCode = commandLine.execute(args);
         assertNotEquals(CommandLine.ExitCode.OK, exitCode);
     }
+
+    @Test
+    public void testSortPluginsByInstallations() throws IOException {
+        Path pluginFile = tempDir.resolve("plugins.txt");
+        Files.write(pluginFile, List.of("plugin1", "plugin2", "plugin3"));
+        String[] args = {"-f", pluginFile.toString(), "-r", "FetchMetadata", "--sort-by-installations"};
+        commandLine.execute(args);
+        List<Plugin> plugins = main.setup().getPlugins();
+        assertNotNull(plugins);
+        assertEquals(3, plugins.size());
+        assertEquals("plugin3", plugins.get(0).getName());
+        assertEquals("plugin2", plugins.get(1).getName());
+        assertEquals("plugin1", plugins.get(2).getName());
+    }
 }
