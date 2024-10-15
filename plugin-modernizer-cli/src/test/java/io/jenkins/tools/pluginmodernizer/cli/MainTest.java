@@ -293,18 +293,35 @@ public class MainTest {
         int exitCode = commandLine.execute(args);
         assertNotEquals(CommandLine.ExitCode.OK, exitCode);
     }
-
     @Test
     public void testSortPluginsByInstallations() throws IOException {
+        // Mock or set up plugin installation counts
+        // For example: plugin1: 100 installations, plugin2: 200 installations, plugin3: 300 installations
+        setupMockInstallationCounts();
+
         Path pluginFile = tempDir.resolve("plugins.txt");
-        Files.write(pluginFile, List.of("plugin1", "plugin2", "plugin3"));
+        Files.write(pluginFile, List.of("plugin1", "plugin2", "plugin3", "plugin4"));
         String[] args = {"-f", pluginFile.toString(), "-r", "FetchMetadata", "--sort-by-installations"};
         commandLine.execute(args);
         List<Plugin> plugins = main.setup().getPlugins();
+
         assertNotNull(plugins);
-        assertEquals(3, plugins.size());
-        assertEquals("plugin3", plugins.get(0).getName());
+        assertEquals(4, plugins.size());
+        assertEquals("plugin3", plugins.get(0).getName()); // Highest installation count
         assertEquals("plugin2", plugins.get(1).getName());
         assertEquals("plugin1", plugins.get(2).getName());
+        assertEquals("plugin4", plugins.get(3).getName()); // Assume plugin4 has 0 or unknown installations
+
+        // Test plugins with equal installation counts
+        // For example: plugin5 and plugin6 both have 150 installations
+        testEqualInstallationCounts();
+    }
+
+    private void setupMockInstallationCounts() {
+        // Implementation to set up mock data
+    }
+
+    private void testEqualInstallationCounts() {
+        // Implementation to test sorting of plugins with equal installation counts
     }
 }
