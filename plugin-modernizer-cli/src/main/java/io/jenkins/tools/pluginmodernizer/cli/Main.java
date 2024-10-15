@@ -10,7 +10,9 @@ import io.jenkins.tools.pluginmodernizer.core.utils.PluginService;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.openrewrite.Recipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -184,6 +186,11 @@ public class Main implements Runnable {
             description = "List available recipes.")
     public boolean listRecipes;
 
+    @Option(
+            names = {"--sort-by-installations"},
+            description = "Sort plugins by the number of installations.")
+    public boolean sortByInstallations;
+
     public Config setup() {
         Config.DEBUG = debug;
         return Config.builder()
@@ -250,6 +257,13 @@ public class Main implements Runnable {
         return loadedPlugins;
     }
 
+    private List<Plugin> sortPluginsByInstallations(List<Plugin> plugins) {
+        PluginService service = Guice.createInjector(new GuiceModule(setup())).getInstance(PluginService.class);
+        return plugins.stream()
+                .sorted(Comparator.comparingInt(service::extractInstallationStats).reversed())
+                .collect(Collectors.toList());
+    }
+
     @Override
     public void run() {
         if (listRecipes) {
@@ -258,6 +272,9 @@ public class Main implements Runnable {
         }
         if (pluginOptions != null) {
             pluginOptions.plugins = loadPlugins();
+            if (sortByInstallations) {
+                pluginOptions.plugins = sortPluginsByInstallations(pluginOptions.plugins);
+            }
         }
         LOG.info("Starting Plugin Modernizer");
         PluginModernizer modernizer =
