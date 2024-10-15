@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -16,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -84,10 +86,10 @@ public class MainTest {
     @Test
     public void testGetRecipesWithFQDN() {
         String[] args = {
-            "-p",
-            "plugin1,plugin2",
-            "-r",
-            "io.jenkins.tools.pluginmodernizer.FetchMetadata,io.jenkins.tools.pluginmodernizer.MinimalBuildJava8"
+                "-p",
+                "plugin1,plugin2",
+                "-r",
+                "io.jenkins.tools.pluginmodernizer.FetchMetadata,io.jenkins.tools.pluginmodernizer.MinimalBuildJava8"
         };
         commandLine.execute(args);
 
@@ -175,14 +177,14 @@ public class MainTest {
     @Test
     public void testSkipPullRequestOptions() throws IOException {
         String[] args = {
-            "-p",
-            "plugin1,plugin2",
-            "-r",
-            "FetchMetadata",
-            "--skip-push",
-            "--recipes",
-            "FetchMetadata",
-            "--skip-pull-request"
+                "-p",
+                "plugin1,plugin2",
+                "-r",
+                "FetchMetadata",
+                "--skip-push",
+                "--recipes",
+                "FetchMetadata",
+                "--skip-pull-request"
         };
         commandLine.execute(args);
         assertTrue(main.setup().isSkipPullRequest());
@@ -191,14 +193,14 @@ public class MainTest {
     @Test
     public void testCleanLocalData() throws IOException {
         String[] args = {
-            "-p",
-            "plugin1,plugin2",
-            "-r",
-            "FetchMetadata",
-            "--skip-push",
-            "--recipes",
-            "FetchMetadata",
-            "--clean-local-data"
+                "-p",
+                "plugin1,plugin2",
+                "-r",
+                "FetchMetadata",
+                "--skip-push",
+                "--recipes",
+                "FetchMetadata",
+                "--clean-local-data"
         };
         commandLine.execute(args);
         assertTrue(main.setup().isRemoveLocalData());
@@ -293,6 +295,7 @@ public class MainTest {
         int exitCode = commandLine.execute(args);
         assertNotEquals(CommandLine.ExitCode.OK, exitCode);
     }
+
     @Test
     public void testSortPluginsByInstallations() throws IOException {
         // Mock or set up plugin installation counts
@@ -321,7 +324,37 @@ public class MainTest {
         // Implementation to set up mock data
     }
 
-    private void testEqualInstallationCounts() {
-        // Implementation to test sorting of plugins with equal installation counts
+    private void testEqualInstallationCounts() throws IOException {
+        // Mock or set up plugin installation counts
+        // For example: plugin5 and plugin6 both have 150 installations
+        setupMockEqualInstallationCounts();
+
+        Path pluginFile = tempDir.resolve("plugins-equal.txt");
+        Files.write(pluginFile, List.of("plugin5", "plugin6", "plugin7"));
+        String[] args = {"-f", pluginFile.toString(), "-r", "FetchMetadata", "--sort-by-installations"};
+        commandLine.execute(args);
+        List<Plugin> plugins = main.setup().getPlugins();
+
+        assertNotNull(plugins);
+        assertEquals(3, plugins.size());
+        assertEquals("plugin5", plugins.get(0).getName()); // plugin5 and plugin6 have equal counts
+        assertEquals("plugin6", plugins.get(1).getName());
+        assertEquals("plugin7", plugins.get(2).getName()); // Assume plugin7 has 0 or unknown installations
+    }
+
+    private void setupMockEqualInstallationCounts() {
+        // Mock the PluginService to return plugins with equal installation counts
+        PluginService pluginService = mock(PluginService.class);
+
+        Plugin plugin5 = new Plugin("plugin5", 150);
+        Plugin plugin6 = new Plugin("plugin6", 150);
+        Plugin plugin7 = new Plugin("plugin7", 0); // Assume plugin7 has 0 installations
+
+        when(pluginService.getPlugin("plugin5")).thenReturn(plugin5);
+        when(pluginService.getPlugin("plugin6")).thenReturn(plugin6);
+        when(pluginService.getPlugin("plugin7")).thenReturn(plugin7);
+
+        // Set the mocked PluginService in the main class or wherever it's used
+        main.setPluginService(pluginService);
     }
 }
