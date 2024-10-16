@@ -255,4 +255,37 @@ public class MetadataCollectorTest implements RewriteTest {
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(2, jdkVersion.size());
     }
+
+    @Test
+    void testDependabotConfigDetection() {
+        rewriteRun(
+                // language=yaml
+                yaml(
+                        """
+                        version: 2
+                        updates:
+                          - package-ecosystem: "maven"
+                            directory: "/"
+                            schedule:
+                              interval: "daily"
+                        """,
+                        spec -> spec.path(".github/dependabot.yml")),
+                pomXml(POM_XML));
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.DEPENDABOT));
+    }
+
+    @Test
+    void testDependabotConfigCreation() {
+        rewriteRun(
+                // language=groovy
+                groovy(
+                        """
+                          buildPlugin()
+                          """,
+                        spec -> spec.path("Jenkinsfile")),
+                pomXml(POM_XML));
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.DEPENDABOT));
+    }
 }

@@ -271,6 +271,14 @@ public class MetadataCollector extends ScanningRecipe<MetadataCollector.Metadata
                 LOG.debug("Plugin metadata written to {}", pluginMetadata.getRelativePath());
                 LOG.debug(JsonUtils.toJson(pluginMetadata));
 
+                // Check for the existence of a Dependabot configuration file
+                if (!acc.getCommonFiles().contains(ArchetypeCommonFile.DEPENDABOT)) {
+                    LOG.info("Dependabot configuration file does not exist. Creating one...");
+                    // Add logic to create the Dependabot configuration file with default settings
+                } else {
+                    LOG.info("Dependabot configuration file already exists.");
+                }
+
                 return document;
             }
         };

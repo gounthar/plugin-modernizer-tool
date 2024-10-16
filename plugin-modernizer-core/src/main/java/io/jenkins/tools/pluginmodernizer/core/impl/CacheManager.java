@@ -22,6 +22,7 @@ public class CacheManager {
     public static final String HEALTH_SCORE_KEY = "health-score";
     public static final String INSTALLATION_STATS_KEY = "plugin-installation-stats";
     public static final String PLUGIN_METADATA_CACHE_KEY = "plugin-metadata";
+    public static final String DEPENDABOT_CONFIG_CACHE_KEY = "dependabot-config";
 
     private static final Logger LOG = LoggerFactory.getLogger(CacheManager.class);
 
@@ -186,5 +187,22 @@ public class CacheManager {
      */
     public Path root() {
         return Path.of(".");
+    }
+
+    /**
+     * Store the Dependabot configuration file in the cache
+     * @param dependabotConfig The Dependabot configuration file
+     */
+    public void putDependabotConfig(CacheEntry<? extends CacheEntry<?>> dependabotConfig) {
+        put(dependabotConfig);
+    }
+
+    /**
+     * Retrieve the Dependabot configuration file from the cache
+     * @param path The path to the cache entry
+     * @return The Dependabot configuration file
+     */
+    public <T extends CacheEntry<T>> T getDependabotConfig(Path path, Class<T> clazz) {
+        return get(path, DEPENDABOT_CONFIG_CACHE_KEY, clazz);
     }
 }
