@@ -36,6 +36,10 @@ public class Plugin {
 
     private static final Logger LOG = LoggerFactory.getLogger(Plugin.class);
 
+    public Logger getLogger() {
+        return Plugin.LOG;
+    }
+
     /**
      * The configuration to use
      */
