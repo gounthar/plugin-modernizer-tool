@@ -119,6 +119,7 @@ public enum PreconditionError {
                     PomModifier pomModifier = new PomModifier(
                             plugin.getLocalRepository().resolve("pom.xml").toString());
                     if (!pomModifier.addRelativePath()) {
+                        plugin.getLogger().warn("Failed to add relative path to POM file");
                         return false;
                     }
                     pomModifier.savePom(
@@ -126,7 +127,7 @@ public enum PreconditionError {
                     plugin.withoutErrors();
                     return true;
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    plugin.getLogger().error("Error while adding relative path: " + e.getMessage());
                     return false;
                 }
             },
