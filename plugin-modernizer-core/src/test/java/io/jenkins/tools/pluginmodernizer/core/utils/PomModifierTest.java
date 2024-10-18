@@ -177,7 +177,7 @@ public class PomModifierTest {
     @Test
     public void testAddRelativePath() throws Exception {
         PomModifier pomModifier = new PomModifier(OUTPUT_POM_PATH);
-        pomModifier.addRelativePath();
+        assertTrue(pomModifier.addRelativePath());
         pomModifier.savePom(OUTPUT_POM_PATH);
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -187,7 +187,10 @@ public class PomModifierTest {
 
         NodeList relativePathList = doc.getElementsByTagName("relativePath");
         assertEquals(1, relativePathList.getLength(), "There should be one relativePath element");
-        Node relativePathNode = relativePathList.item(0);
+        Element parentElement = (Element) doc.getElementsByTagName("parent").item(0);
+        Node relativePathNode =
+                parentElement.getElementsByTagName("relativePath").item(0);
+        assertNotNull(relativePathNode, "The relativePath element should be a child of the parent element");
         assertTrue(relativePathNode.getTextContent().isEmpty(), "The relativePath element should be self-closing");
     }
 }
