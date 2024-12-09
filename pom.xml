@@ -10,7 +10,7 @@
   </parent>
 
   <groupId>io.jenkins.plugin-modernizer</groupId>
-  <artifactId>plugin-modernizer-parent-pom</artifactId>
+  <artifactId>plugin-modernizer-pom</artifactId>
   <version>${changelist}</version>
   <packaging>pom</packaging>
   <name>Plugin Modernizer Parent</name>
@@ -31,6 +31,8 @@
 
   <properties>
 
+    <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+
     <!-- Reproducible builds -->
     <project.build.outputTimestamp>2024-01-01T00:00:00Z</project.build.outputTimestamp>
 
@@ -44,7 +46,7 @@
 
     <!-- Version -->
     <openrewrite.bom.version>2.23.1</openrewrite.bom.version>
-    <openrewrite.maven.plugin.version>5.46.1</openrewrite.maven.plugin.version>
+    <openrewrite.maven.plugin.version>5.46.2</openrewrite.maven.plugin.version>
     <openrewrite.jenkins.version>0.18.1</openrewrite.jenkins.version>
     <micrometer.version>1.14.1</micrometer.version>
     <slf4j.version>2.0.16</slf4j.version>
@@ -68,7 +70,7 @@
     <snakeyaml.version>2.3</snakeyaml.version>
     <guice.version>7.0.0</guice.version>
     <error.prone.version>2.36.0</error.prone.version>
-    <checker.qual.version>3.48.2</checker.qual.version>
+    <checker.qual.version>3.48.3</checker.qual.version>
     <jakarta.inject.version>2.0.1</jakarta.inject.version>
     <jwt.version>0.12.6</jwt.version>
     <bouncycastle.version>1.79</bouncycastle.version>
