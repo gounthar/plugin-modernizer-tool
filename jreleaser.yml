@@ -1,0 +1,52 @@
+project:
+  name: plugin-modernizer-tool
+  description: Plugin Modernizer Tool
+  versionPattern: CUSTOM
+  longDescription: Plugin Modernizer Tool
+  authors:
+    - Jenkins Project
+  license: MIT
+  links:
+    homepage: https://github.com/jenkins-infra/plugin-modernizer-tool
+  java:
+    groupId: io.jenkins.plugin-modernizer
+    version: 17
+  inceptionYear: 2024
+
+release:
+  github:
+    enabled: true
+    overwrite: false
+    tagName: "{{projectVersion}}"
+    releaseName: "{{tagName}}"
+    changelog:
+      enabled: false
+    milestone:
+      close: false
+    update:
+      enabled: true
+    uploadAssets: RELEASE
+
+distributions:
+  plugin-modernizer:
+    active: RELEASE
+    type: SINGLE_JAR
+    stereotype: CLI
+    artifacts:
+      - path: "{{distributionName}}-cli/target/jenkins-plugin-modernizer-{{projectVersion}}.jar"
+
+packagers:
+  brew:
+    active: RELEASE
+    templateDirectory: homebrew
+    formulaName: PluginModernizer
+    repository:
+      active: RELEASE
+      owner: jonesbusy
+      name: homebrew-tap
+      tagName: '{{distributionName}}-{{tagName}}'
+    extraProperties:
+      skipLicenseFile: true
+    skipTemplates:
+      - cask.rb.tpl
+      - README.md.tpl

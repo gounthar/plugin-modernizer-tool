@@ -10,7 +10,7 @@
   </parent>
 
   <groupId>io.jenkins.plugin-modernizer</groupId>
-  <artifactId>plugin-modernizer-parent-pom</artifactId>
+  <artifactId>plugin-modernizer-pom</artifactId>
   <version>${changelist}</version>
   <packaging>pom</packaging>
   <name>Plugin Modernizer Parent</name>
@@ -31,6 +31,8 @@
 
   <properties>
 
+    <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+
     <!-- Reproducible builds -->
     <project.build.outputTimestamp>2024-01-01T00:00:00Z</project.build.outputTimestamp>
 
@@ -43,32 +45,32 @@
     <spotless.check.skip>false</spotless.check.skip>
 
     <!-- Version -->
-    <openrewrite.bom.version>2.22.0</openrewrite.bom.version>
-    <openrewrite.maven.plugin.version>5.45.0</openrewrite.maven.plugin.version>
-    <openrewrite.jenkins.version>0.17.0</openrewrite.jenkins.version>
+    <openrewrite.bom.version>2.23.1</openrewrite.bom.version>
+    <openrewrite.maven.plugin.version>5.46.2</openrewrite.maven.plugin.version>
+    <openrewrite.jenkins.version>0.18.1</openrewrite.jenkins.version>
     <micrometer.version>1.14.1</micrometer.version>
     <slf4j.version>2.0.16</slf4j.version>
     <logback.version>1.5.12</logback.version>
     <picocli.version>4.7.6</picocli.version>
-    <common.io.version>2.17.0</common.io.version>
+    <common.io.version>2.18.0</common.io.version>
     <common.lang3.version>3.17.0</common.lang3.version>
     <common.text.version>1.12.0</common.text.version>
     <asm.version>9.7.1</asm.version>
     <gson.version>2.11.0</gson.version>
-    <jackson.version>2.18.1</jackson.version>
+    <jackson.version>2.18.2</jackson.version>
     <maven.version>3.9.9</maven.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
-    <jgit.version>7.0.0.202409031743-r</jgit.version>
+    <jgit.version>7.1.0.202411261347-r</jgit.version>
     <github-api.version>1.326</github-api.version>
     <commons-compress.version>1.27.1</commons-compress.version>
     <guava.version>33.3.1-jre</guava.version>
     <byte-buddy.version>1.15.10</byte-buddy.version>
-    <wiremock.version>3.9.2</wiremock.version>
-    <jte.version>3.1.14</jte.version>
+    <wiremock.version>3.10.0</wiremock.version>
+    <jte.version>3.1.15</jte.version>
     <snakeyaml.version>2.3</snakeyaml.version>
     <guice.version>7.0.0</guice.version>
-    <error.prone.version>2.35.1</error.prone.version>
-    <checker.qual.version>3.48.2</checker.qual.version>
+    <error.prone.version>2.36.0</error.prone.version>
+    <checker.qual.version>3.48.3</checker.qual.version>
     <jakarta.inject.version>2.0.1</jakarta.inject.version>
     <jwt.version>0.12.6</jwt.version>
     <bouncycastle.version>1.79</bouncycastle.version>

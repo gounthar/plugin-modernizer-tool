@@ -11,8 +11,6 @@ import io.jenkins.tools.pluginmodernizer.core.model.PluginProcessingException;
 import io.jenkins.tools.pluginmodernizer.core.utils.PluginService;
 import jakarta.inject.Inject;
 import java.util.List;
-import java.util.stream.Collectors;
-import org.openrewrite.Recipe;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,13 +35,20 @@ public class PluginModernizer {
     private CacheManager cacheManager;
 
     /**
+     * Validate the configuration
+     */
+    public void validate() {
+        mavenInvoker.validateMavenHome();
+        mavenInvoker.validateMavenVersion();
+        ghService.validate();
+    }
+
+    /**
      * Entry point to start the plugin modernization process
      */
     public void start() {
 
-        // Validate maven
-        mavenInvoker.validateMavenHome();
-        mavenInvoker.validateMavenVersion();
+        validate();
 
         // Setup
         this.ghService.connect();
@@ -54,8 +59,7 @@ public class PluginModernizer {
 
         // Debug config
         LOG.debug("Plugins: {}", config.getPlugins());
-        LOG.debug(
-                "Recipes: {}", config.getRecipes().stream().map(Recipe::getName).collect(Collectors.joining(", ")));
+        LOG.debug("Recipe: {}", config.getRecipe().getName());
         LOG.debug("GitHub owner: {}", config.getGithubOwner());
         LOG.debug("Update Center Url: {}", config.getJenkinsUpdateCenter());
         LOG.debug("Plugin versions Url: {}", config.getJenkinsPluginVersions());
@@ -138,10 +142,7 @@ public class PluginModernizer {
 
             // Collect metadata and move metadata from the target directory of the plugin to the common cache
             if (!plugin.hasMetadata() || config.isFetchMetadataOnly()) {
-                plugin.collectMetadata(mavenInvoker);
-                plugin.moveMetadata(cacheManager);
-                plugin.loadMetadata(cacheManager);
-                plugin.enrichMetadata(pluginService);
+                collectMetadata(plugin);
 
             } else {
                 LOG.debug("Metadata already computed for plugin {}. Using cached metadata.", plugin.getName());
@@ -166,10 +167,7 @@ public class PluginModernizer {
 
                 // Retry to collect metadata after remediation to get up-to-date results
                 if (!config.isFetchMetadataOnly()) {
-                    plugin.collectMetadata(mavenInvoker);
-                    plugin.moveMetadata(cacheManager);
-                    plugin.loadMetadata(cacheManager);
-                    plugin.enrichMetadata(pluginService);
+                    collectMetadata(plugin);
                 }
             }
 
@@ -206,10 +204,7 @@ public class PluginModernizer {
 
             // Recollect metadata after modernization
             if (!config.isFetchMetadataOnly()) {
-                plugin.collectMetadata(mavenInvoker);
-                plugin.moveMetadata(cacheManager);
-                plugin.loadMetadata(cacheManager);
-                plugin.enrichMetadata(pluginService);
+                collectMetadata(plugin);
                 LOG.debug(
                         "Plugin {} metadata after modernization: {}",
                         plugin.getName(),
@@ -236,6 +231,17 @@ public class PluginModernizer {
                 plugin.addError("Unexpected processing error. Check the logs at " + plugin.getLogFile(), e);
             }
         }
+    }
+
+    /**
+     * Collect metadata for a plugin
+     * @param plugin The plugin
+     */
+    private void collectMetadata(Plugin plugin) {
+        plugin.collectMetadata(mavenInvoker);
+        plugin.moveMetadata(cacheManager);
+        plugin.loadMetadata(cacheManager);
+        plugin.enrichMetadata(pluginService);
     }
 
     /**
@@ -340,6 +346,13 @@ public class PluginModernizer {
                     else {
                         LOG.info("Pull request was open on "
                                 + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
+
+                        // Display changes depending on the recipe
+                        if (config.getRecipe()
+                                .getName()
+                                .equals("io.jenkins.tools.pluginmodernizer.UpgradeBomVersion")) {
+                            LOG.info("New BOM version: {}", plugin.getMetadata().getBomVersion());
+                        }
                     }
                 }
             }

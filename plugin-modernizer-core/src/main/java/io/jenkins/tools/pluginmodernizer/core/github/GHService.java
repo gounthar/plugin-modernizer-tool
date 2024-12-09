@@ -60,24 +60,22 @@ public class GHService {
      */
     private GHApp app;
 
-    @Inject
-    public void init() {
-        validate();
-    }
-
     /**
      * Validate the configuration of the GHService
      */
-    private void validate() {
+    public void validate() {
+        if (config.isFetchMetadataOnly()) {
+            return;
+        }
         if (Settings.GITHUB_TOKEN == null
                 && (config.getGithubAppId() == null
                         || config.getGithubAppSourceInstallationId() == null
                         || config.getGithubAppTargetInstallationId() == null)) {
-            throw new ModernizerException("Please set GH_TOKEN, GITHUB_TOKEN or configure GitHub app authentication");
+            throw new ModernizerException("Please set GH_TOKEN, GITHUB_TOKEN or configure GitHub app authentication.");
         }
         if (config.getGithubOwner() == null) {
             throw new ModernizerException(
-                    "GitHub owner (username/organization) is not set. Please set GH_OWNER or GITHUB_OWNER environment variable.");
+                    "GitHub owner (username/organization) is not set. Please set GH_OWNER or GITHUB_OWNER environment variable. Or use --github-owner if running from CLI");
         }
         if (config.getGithubAppId() != null && config.getGithubAppSourceInstallationId() != null) {
             if (Settings.GITHUB_APP_PRIVATE_KEY_FILE == null) {
@@ -494,7 +492,7 @@ public class GHService {
         if (Files.isDirectory(plugin.getLocalRepository())) {
             // Ensure to set the correct remote, reset changes and pull
             try (Git git = Git.open(plugin.getLocalRepository().toFile())) {
-                String defaultBranch = config.isDryRun() || plugin.isArchived(this)
+                String defaultBranch = config.isDryRun() || config.isFetchMetadataOnly() || plugin.isArchived(this)
                         ? plugin.getRemoteRepository(this).getDefaultBranch()
                         : plugin.getRemoteForkRepository(this).getDefaultBranch();
                 git.remoteSetUrl()
@@ -507,6 +505,7 @@ public class GHService {
                         .setMode(ResetCommand.ResetType.HARD)
                         .setRef("origin/" + defaultBranch)
                         .call();
+                git.clean().setCleanDirectories(true).setDryRun(false).call();
                 Ref ref = git.checkout()
                         .setCreateBranch(false)
                         .setName(defaultBranch)
@@ -540,7 +539,7 @@ public class GHService {
             try {
                 git.checkout().setCreateBranch(true).setName(BRANCH_NAME).call();
             } catch (RefAlreadyExistsException e) {
-                String defaultBranch = config.isDryRun() || plugin.isArchived(this)
+                String defaultBranch = config.isDryRun() || config.isFetchMetadataOnly() || plugin.isArchived(this)
                         ? plugin.getRemoteRepository(this).getDefaultBranch()
                         : plugin.getRemoteForkRepository(this).getDefaultBranch();
                 LOG.debug("Branch already exists. Checking out the branch");
@@ -571,7 +570,7 @@ public class GHService {
         }
         try (Git git = Git.open(plugin.getLocalRepository().toFile())) {
             git.getRepository().scanForRepoChanges();
-            String commitMessage = TemplateUtils.renderCommitMessage(plugin, config.getRecipes());
+            String commitMessage = TemplateUtils.renderCommitMessage(plugin, config.getRecipe());
             LOG.debug("Commit message: {}", commitMessage);
             Status status = git.status().call();
             if (status.hasUncommittedChanges()) {
@@ -702,8 +701,8 @@ public class GHService {
         refreshToken(config.getGithubAppTargetInstallationId());
 
         // Renders parts and log then even if dry-run
-        String prTitle = TemplateUtils.renderPullRequestTitle(plugin, config.getRecipes());
-        String prBody = TemplateUtils.renderPullRequestBody(plugin, config.getRecipes());
+        String prTitle = TemplateUtils.renderPullRequestTitle(plugin, config.getRecipe());
+        String prBody = TemplateUtils.renderPullRequestBody(plugin, config.getRecipe());
         LOG.debug("Pull request title: {}", prTitle);
         LOG.debug("Pull request body: {}", prBody);
         LOG.debug("Draft mode: {}", config.isDraft());
