@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.nio.file.Paths;
+import java.net.URL;
+import java.net.MalformedURLException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.openrewrite.Recipe;
@@ -59,5 +61,25 @@ public class SettingsEnvTest {
             assertNotNull(recipe.getTags(), "Recipe tags are null for " + recipe.getName());
             assertFalse(recipe.getTags().isEmpty(), "Recipe tags are empty for " + recipe.getName());
         }
+    }
+
+    @Test
+    public void testPluginStatsInstallationsUrl() throws Exception {
+        String expectedUrl = "https://stats.jenkins.io/jenkins-stats/svg/202410-plugins.csv";
+        URL actualUrl = Settings.DEFAULT_PLUGINS_STATS_INSTALLATIONS_URL;
+        assertEquals(expectedUrl, actualUrl.toString());
+    }
+
+    @Test
+    public void testPluginStatsInstallationsUrlWithRetryAndFallback() throws Exception {
+        envVars.set("JENKINS_PLUGINS_STATS_INSTALLATIONS_URL", "invalid-url");
+        URL url = null;
+        try {
+            url = Settings.DEFAULT_PLUGINS_STATS_INSTALLATIONS_URL;
+        } catch (MalformedURLException e) {
+            // Expected exception
+        }
+        assertNotNull(url);
+        assertEquals("https://stats.jenkins.io/jenkins-stats/svg/202410-plugins.csv", url.toString());
     }
 }

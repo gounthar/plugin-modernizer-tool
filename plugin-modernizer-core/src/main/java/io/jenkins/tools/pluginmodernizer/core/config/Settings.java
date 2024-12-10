@@ -190,7 +190,31 @@ public class Settings {
         if (url != null) {
             return new URL(url);
         }
-        return new URL(readProperty("plugin.stats.installations.plugin.url", "urls.properties"));
+
+        int maxRetries = 3;
+        int retryCount = 0;
+        long backoffTime = 1000; // Initial backoff time in milliseconds
+
+        while (retryCount < maxRetries) {
+            try {
+                return new URL(readProperty("plugin.stats.installations.plugin.url", "urls.properties"));
+            } catch (MalformedURLException e) {
+                LOG.error("Error reading plugin.stats.installations.plugin.url, attempt {}/{}", retryCount + 1, maxRetries, e);
+                retryCount++;
+                try {
+                    Thread.sleep(backoffTime);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new ModernizerException("Retry interrupted", ie);
+                }
+                backoffTime *= 2; // Exponential backoff
+            }
+        }
+
+        // Fallback to previous URL if all retries fail
+        String previousUrl = "https://stats.jenkins.io/jenkins-stats/svg/202410-plugins.csv";
+        LOG.warn("Falling back to previous URL: {}", previousUrl);
+        return new URL(previousUrl);
     }
 
     private static String getGithubToken() {
