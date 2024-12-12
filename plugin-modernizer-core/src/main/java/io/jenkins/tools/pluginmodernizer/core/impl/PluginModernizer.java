@@ -40,28 +40,8 @@ public class PluginModernizer {
     public void validate() {
         mavenInvoker.validateMavenHome();
         mavenInvoker.validateMavenVersion();
-        if (!ghService.isConnected()) {
-            ghService.connect();
-            ghService.validate();
-        }
-    }
-
-    /**
-     * List available recipes
-     */
-    public void listRecipes() {
-        Settings.AVAILABLE_RECIPES.forEach(recipe -> LOG.info(
-                "{} - {}",
-                recipe.getName().replaceAll(Settings.RECIPE_FQDN_PREFIX + ".", ""),
-                recipe.getDescription()));
-    }
-
-    /**
-     * Expoose the dry run option
-     * @return If the tool is running in dry run mode
-     */
-    public Boolean isDryRun() {
-        return config.isDryRun();
+        ghService.connect();
+        ghService.validate();
     }
 
     /**
@@ -73,52 +53,16 @@ public class PluginModernizer {
     }
 
     /**
-     * Expose the effective Maven version
-     * @return The Maven version
-     */
-    public String getMavenVersion() {
-        return mavenInvoker.getMavenVersion() != null
-                ? mavenInvoker.getMavenVersion().toString()
-                : "unknown";
-    }
-
-    /**
-     * Expose the effective Maven home
-     * @return The Maven home
-     */
-    public String getMavenHome() {
-        return config.getMavenHome().toString();
-    }
-
-    /**
-     * Expose the effective cache path
-     * @return The cache path
-     */
-    public String getCachePath() {
-        return config.getCachePath().toString();
-    }
-
-    /**
-     * Expose the effective Java version
-     * @return The Java version
-     */
-    public String getJavaVersion() {
-        return System.getProperty("java.version");
-    }
-
-    /**
-     * Clean the cache
-     */
-    public void cleanCache() {
-        cacheManager.wipe();
-    }
-
-    /**
      * Entry point to start the plugin modernization process
      */
     public void start() {
 
         validate();
+
+        // Setup
+        if (config.isRemoveLocalData()) {
+            cacheManager.wipe();
+        }
         cacheManager.init();
 
         // Debug config
@@ -131,6 +75,9 @@ public class PluginModernizer {
         LOG.debug("Installation Stats Url: {}", config.getPluginStatsInstallations());
         LOG.debug("Cache Path: {}", config.getCachePath());
         LOG.debug("Dry Run: {}", config.isDryRun());
+        LOG.debug("Skip Push: {}", config.isSkipPush());
+        LOG.debug("Skip Build: {}", config.isSkipBuild());
+        LOG.debug("Skip Pull Request: {}", config.isSkipPullRequest());
         LOG.debug("Maven rewrite plugin version: {}", Settings.MAVEN_REWRITE_PLUGIN_VERSION);
 
         // Fetch plugin versions
@@ -314,7 +261,11 @@ public class PluginModernizer {
         JDK jdk = JDK.min(metadata.getJdks());
         plugin.withJDK(jdk);
         plugin.clean(mavenInvoker);
-        plugin.compile(mavenInvoker);
+        if (!config.isSkipBuild()) {
+            plugin.compile(mavenInvoker);
+        } else {
+            LOG.info("Skipping build for plugin {}", plugin.getName());
+        }
         return jdk;
     }
 
@@ -347,7 +298,11 @@ public class PluginModernizer {
         plugin.withJDK(jdk);
         plugin.clean(mavenInvoker);
         plugin.format(mavenInvoker);
-        plugin.verify(mavenInvoker);
+        if (!config.isSkipBuild()) {
+            plugin.verify(mavenInvoker);
+        } else {
+            LOG.info("Skipping verification for plugin {}", plugin.getName());
+        }
         if (plugin.hasErrors()) {
             LOG.info("Plugin {} failed to verify with JDK {}", plugin.getName(), jdk.getMajor());
             plugin.withoutErrors();
@@ -386,13 +341,26 @@ public class PluginModernizer {
                     LOG.info("Dry run mode. Changes were commited on on " + plugin.getLocalRepository()
                             + " but not pushed");
                 } else {
+                    if (config.isSkipPush()) {
+                        LOG.info("Skip push mode. Changes were commited on on " + plugin.getLocalRepository()
+                                + " but not pushed");
+                    } else if (config.isSkipPullRequest()) {
+                        LOG.info("Skip pull request mode. Changes were pushed on "
+                                + plugin.getRemoteForkRepository(this.ghService).getHtmlUrl()
+                                + " but no pull request was open on "
+                                + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
+                    }
                     // Change were made
-                    LOG.info("Pull request was open on "
-                            + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
+                    else {
+                        LOG.info("Pull request was open on "
+                                + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
 
-                    // Display changes depending on the recipe
-                    if (config.getRecipe().getName().equals("io.jenkins.tools.pluginmodernizer.UpgradeBomVersion")) {
-                        LOG.info("New BOM version: {}", plugin.getMetadata().getBomVersion());
+                        // Display changes depending on the recipe
+                        if (config.getRecipe()
+                                .getName()
+                                .equals("io.jenkins.tools.pluginmodernizer.UpgradeBomVersion")) {
+                            LOG.info("New BOM version: {}", plugin.getMetadata().getBomVersion());
+                        }
                     }
                 }
             }

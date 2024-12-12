@@ -93,14 +93,14 @@ public class GHService {
      * Connect to GitHub using the GitHub auth token
      */
     public void connect() {
-        if (isConnected()) {
-            return;
-        }
         if (Settings.GITHUB_TOKEN == null
                 && (config.getGithubAppId() == null
                         || config.getGithubAppSourceInstallationId() == null
                         || config.getGithubAppTargetInstallationId() == null)) {
             throw new ModernizerException("Please set GH_TOKEN, GITHUB_TOKEN or configure GitHub app authentication.");
+        }
+        if (github != null) {
+            throw new ModernizerException("GitHub client is already connected.");
         }
         try {
 
@@ -122,7 +122,6 @@ public class GHService {
                         .createToken()
                         .create();
                 github = new GitHubBuilder()
-                        .withEndpoint(config.getGithubApiUrl().toString())
                         .withAppInstallationToken(appInstallationToken.getToken())
                         .build();
                 LOG.debug("Connected to GitHub using GitHub App");
@@ -130,10 +129,7 @@ public class GHService {
             // Connect with token
             else {
                 LOG.debug("Connecting to GitHub using token...");
-                github = new GitHubBuilder()
-                        .withEndpoint(config.getGithubApiUrl().toString())
-                        .withOAuthToken(Settings.GITHUB_TOKEN)
-                        .build();
+                github = GitHub.connectUsingOAuth(Settings.GITHUB_TOKEN);
             }
             GHUser user = getCurrentUser();
             if (user == null) {
@@ -256,7 +252,6 @@ public class GHService {
             LOG.debug("Forked repository: {}", fork.getHtmlUrl());
         } catch (IOException | InterruptedException e) {
             plugin.addError("Failed to fork the repository", e);
-            plugin.raiseLastError();
         }
     }
 
@@ -409,7 +404,6 @@ public class GHService {
             LOG.info("Synced the forked repository for plugin {}", plugin);
         } catch (IOException e) {
             plugin.addError("Failed to sync the repository", e);
-            plugin.raiseLastError();
         }
     }
 
@@ -464,7 +458,6 @@ public class GHService {
             plugin.withoutChangesPushed();
         } catch (IOException e) {
             plugin.addError("Failed to delete the fork", e);
-            plugin.raiseLastError();
         }
     }
 
@@ -492,7 +485,6 @@ public class GHService {
         } catch (GitAPIException e) {
             LOG.error("Failed to fetch the repository", e);
             plugin.addError("Failed to fetch the repository", e);
-            plugin.raiseLastError();
         }
     }
 
@@ -536,7 +528,6 @@ public class GHService {
                 LOG.info("Fetched repository from {} to branch {}", remoteUrl, ref.getName());
             } catch (IOException | URISyntaxException e) {
                 plugin.addError("Failed fetch repository", e);
-                plugin.raiseLastError();
             }
         }
         // Clone the repository
@@ -572,7 +563,6 @@ public class GHService {
             }
         } catch (IOException | GitAPIException e) {
             plugin.addError("Failed to checkout branch", e);
-            plugin.raiseLastError();
         }
     }
 
@@ -686,6 +676,10 @@ public class GHService {
             LOG.info("Skipping push changes for plugin {} in fetch-metadata-only mode", plugin);
             return;
         }
+        if (config.isSkipPush()) {
+            LOG.info("Skipping push changes for plugin {}", plugin);
+            return;
+        }
         if (!plugin.hasCommits()) {
             LOG.info("No commits to push for plugin {}", plugin.getName());
             return;
@@ -746,6 +740,10 @@ public class GHService {
             LOG.info("Skipping pull request for plugin {} in fetch-metadata-only mode", plugin);
             return;
         }
+        if (config.isSkipPullRequest() || config.isSkipPush()) {
+            LOG.info("Skipping pull request for plugin {}", plugin);
+            return;
+        }
         if (!plugin.hasChangesPushed()) {
             LOG.info("No changes pushed to open pull request for plugin {}", plugin.getName());
             return;
@@ -772,16 +770,12 @@ public class GHService {
                     false,
                     config.isDraft());
             LOG.info("Pull request created: {}", pr.getHtmlUrl());
+            plugin.withoutTags();
             plugin.withPullRequest();
             try {
-                String[] tags = plugin.getTags().toArray(String[]::new);
-                if (tags.length > 0) {
-                    pr.addLabels(tags);
-                }
+                pr.addLabels(plugin.getTags().toArray(String[]::new));
             } catch (Exception e) {
                 LOG.debug("Failed to add labels to pull request: {}. Probably missing permission.", e.getMessage());
-            } finally {
-                plugin.withoutTags();
             }
         } catch (IOException e) {
             plugin.addError("Failed to create pull request", e);

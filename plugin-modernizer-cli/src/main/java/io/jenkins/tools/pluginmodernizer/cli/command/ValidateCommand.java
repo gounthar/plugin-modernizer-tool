@@ -1,8 +1,8 @@
 package io.jenkins.tools.pluginmodernizer.cli.command;
 
-import io.jenkins.tools.pluginmodernizer.cli.options.EnvOptions;
-import io.jenkins.tools.pluginmodernizer.cli.options.GitHubOptions;
+import com.google.inject.Guice;
 import io.jenkins.tools.pluginmodernizer.cli.options.GlobalOptions;
+import io.jenkins.tools.pluginmodernizer.core.GuiceModule;
 import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.impl.PluginModernizer;
 import io.jenkins.tools.pluginmodernizer.core.model.ModernizerException;
@@ -22,41 +22,21 @@ public class ValidateCommand implements ICommand {
     private static final Logger LOG = LoggerFactory.getLogger(ValidateCommand.class);
 
     /**
-     * Environment options
-     */
-    @CommandLine.Mixin
-    private EnvOptions envOptions;
-
-    /**
      * Global options for all commands
      */
     @CommandLine.Mixin
     private GlobalOptions options;
 
-    /**
-     * GitHub options
-     */
-    @CommandLine.Mixin
-    private GitHubOptions githubOptions;
-
-    @Override
-    public Config setup(Config.Builder builder) {
-        options.config(builder);
-        envOptions.config(builder);
-        githubOptions.config(builder);
-        return builder.build();
-    }
-
     @Override
     public Integer call() throws Exception {
-        PluginModernizer modernizer = getModernizer();
+        Config config = options.getBuilderForOptions().build();
+        PluginModernizer modernizer =
+                Guice.createInjector(new GuiceModule(config)).getInstance(PluginModernizer.class);
         try {
             modernizer.validate();
             LOG.info("GitHub owner: {}", modernizer.getGithubOwner());
-            LOG.info("Maven home: {}", modernizer.getMavenHome());
-            LOG.info("Maven version: {}", modernizer.getMavenVersion());
-            LOG.info("Java version: {}", modernizer.getJavaVersion());
-            LOG.info("Cache path: {}", modernizer.getCachePath());
+            LOG.info("Maven home: {}", config.getMavenHome());
+            LOG.info("Cache path: {}", config.getCachePath());
         } catch (ModernizerException e) {
             LOG.error("Validation error");
             LOG.error(e.getMessage());
