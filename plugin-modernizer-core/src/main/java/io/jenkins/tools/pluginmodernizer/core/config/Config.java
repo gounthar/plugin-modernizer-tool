@@ -2,10 +2,10 @@ package io.jenkins.tools.pluginmodernizer.core.config;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
+import io.jenkins.tools.pluginmodernizer.core.model.Recipe;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
-import org.openrewrite.Recipe;
 
 public class Config {
 
@@ -19,16 +19,12 @@ public class Config {
     private final URL jenkinsPluginVersions;
     private final URL pluginHealthScore;
     private final URL pluginStatsInstallations;
+    private final URL githubApiUrl;
     private final Path cachePath;
     private final Path mavenHome;
     private final boolean dryRun;
-    private final boolean skipPush;
-    private final boolean skipBuild;
     private final boolean draft;
-    private final boolean skipPullRequest;
-    private final boolean removeLocalData;
     private final boolean removeForks;
-    private final boolean exportDatatables;
     private final String githubOwner;
     private final Long githubAppId;
     private final Long githubAppSourceInstallationId;
@@ -46,16 +42,12 @@ public class Config {
             URL jenkinsPluginVersions,
             URL pluginHealthScore,
             URL pluginStatsInstallations,
+            URL githubApiUrl,
             Path cachePath,
             Path mavenHome,
             boolean dryRun,
-            boolean skipPush,
-            boolean skipBuild,
             boolean draft,
-            boolean skipPullRequest,
-            boolean removeLocalData,
-            boolean removeForks,
-            boolean exportDatatables) {
+            boolean removeForks) {
         this.version = version;
         this.githubOwner = githubOwner;
         this.githubAppId = githubAppId;
@@ -67,16 +59,12 @@ public class Config {
         this.jenkinsPluginVersions = jenkinsPluginVersions;
         this.pluginHealthScore = pluginHealthScore;
         this.pluginStatsInstallations = pluginStatsInstallations;
+        this.githubApiUrl = githubApiUrl;
         this.cachePath = cachePath;
         this.mavenHome = mavenHome;
         this.dryRun = dryRun;
-        this.skipPush = skipPush;
-        this.skipBuild = skipBuild;
         this.draft = draft;
-        this.skipPullRequest = skipPullRequest;
-        this.removeLocalData = removeLocalData;
         this.removeForks = removeForks;
-        this.exportDatatables = exportDatatables;
     }
 
     public String getVersion() {
@@ -131,6 +119,10 @@ public class Config {
         return pluginStatsInstallations;
     }
 
+    public URL getGithubApiUrl() {
+        return githubApiUrl;
+    }
+
     public Path getCachePath() {
         return cachePath;
     }
@@ -147,32 +139,12 @@ public class Config {
         return DEBUG;
     }
 
-    public boolean isSkipPullRequest() {
-        return skipPullRequest;
-    }
-
     public boolean isDraft() {
         return draft;
     }
 
-    public boolean isSkipPush() {
-        return skipPush;
-    }
-
-    public boolean isSkipBuild() {
-        return skipBuild;
-    }
-
-    public boolean isRemoveLocalData() {
-        return removeLocalData;
-    }
-
     public boolean isRemoveForks() {
         return removeForks;
-    }
-
-    public boolean isExportDatatables() {
-        return exportDatatables;
     }
 
     public static Builder builder() {
@@ -191,15 +163,11 @@ public class Config {
         private URL jenkinsPluginVersions = Settings.DEFAULT_PLUGIN_VERSIONS;
         private URL pluginStatsInstallations = Settings.DEFAULT_PLUGINS_STATS_INSTALLATIONS_URL;
         private URL pluginHealthScore = Settings.DEFAULT_HEALTH_SCORE_URL;
+        private URL githubApiUrl = Settings.GITHUB_API_URL;
         private Path cachePath = Settings.DEFAULT_CACHE_PATH;
         private Path mavenHome = Settings.DEFAULT_MAVEN_HOME;
         private boolean dryRun = false;
         private boolean draft = false;
-        private boolean skipPush = false;
-        private boolean skipBuild = false;
-        private boolean skipPullRequest = false;
-        private boolean exportDatatables = false;
-        public boolean removeLocalData = false;
         public boolean removeForks = false;
 
         public Builder withVersion(String version) {
@@ -265,6 +233,13 @@ public class Config {
             return this;
         }
 
+        public Builder withGithubApiUrl(URL githubApiUrl) {
+            if (githubApiUrl != null) {
+                this.githubApiUrl = githubApiUrl;
+            }
+            return this;
+        }
+
         public Builder withCachePath(Path cachePath) {
             if (cachePath != null) {
                 this.cachePath = cachePath;
@@ -289,33 +264,8 @@ public class Config {
             return this;
         }
 
-        public Builder withSkipPush(boolean skipPush) {
-            this.skipPush = skipPush;
-            return this;
-        }
-
-        public Builder withSkipBuild(boolean skipBuild) {
-            this.skipBuild = skipBuild;
-            return this;
-        }
-
-        public Builder withSkipPullRequest(boolean skipPullRequest) {
-            this.skipPullRequest = skipPullRequest;
-            return this;
-        }
-
-        public Builder withRemoveLocalData(boolean removeLocalData) {
-            this.removeLocalData = removeLocalData;
-            return this;
-        }
-
         public Builder withRemoveForks(boolean removeForks) {
             this.removeForks = removeForks;
-            return this;
-        }
-
-        public Builder withExportDatatables(boolean exportDatatables) {
-            this.exportDatatables = exportDatatables;
             return this;
         }
 
@@ -332,16 +282,12 @@ public class Config {
                     jenkinsPluginVersions,
                     pluginHealthScore,
                     pluginStatsInstallations,
+                    githubApiUrl,
                     cachePath,
                     mavenHome,
                     dryRun,
-                    skipPush,
-                    skipBuild,
                     draft,
-                    skipPullRequest,
-                    removeLocalData,
-                    removeForks,
-                    exportDatatables);
+                    removeForks);
         }
     }
 }

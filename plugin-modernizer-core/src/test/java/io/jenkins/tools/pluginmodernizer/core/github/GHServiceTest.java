@@ -20,6 +20,7 @@ import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.config.Settings;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
 import io.jenkins.tools.pluginmodernizer.core.model.PluginProcessingException;
+import io.jenkins.tools.pluginmodernizer.core.model.Recipe;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -38,7 +39,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.openrewrite.Recipe;
 
 @ExtendWith({MockitoExtension.class})
 public class GHServiceTest {
@@ -641,6 +641,7 @@ public class GHServiceTest {
 
         doReturn(recipe).when(config).getRecipe();
         doReturn("recipe1").when(recipe).getName();
+        doReturn("test").when(config).getGithubOwner();
         doReturn(null).when(config).getGithubAppTargetInstallationId();
         doReturn(false).when(config).isDraft();
         doReturn(true).when(plugin).hasChangesPushed();
@@ -672,6 +673,7 @@ public class GHServiceTest {
 
         doReturn(recipe).when(config).getRecipe();
         doReturn("recipe1").when(recipe).getName();
+        doReturn("test").when(config).getGithubOwner();
         doReturn(null).when(config).getGithubAppTargetInstallationId();
         doReturn(true).when(config).isDraft();
         doReturn(true).when(plugin).hasChangesPushed();

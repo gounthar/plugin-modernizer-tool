@@ -46,10 +46,7 @@ Learn more at [this project page](https://www.jenkins.io/projects/gsoc/2024/proj
 
 ## Getting Started
 
-> [!Note]
-> Releases are paused until the end of the GSoC period. To use the latest version of the tool, clone this project locally and build it using the following commands.
-
-### Requirements to build
+### Requirements
 - Maven version 3.9.7 or later, or mvnd
 - Java 17 or Java 21
 
@@ -97,13 +94,6 @@ From there you need to save both ID of installation (found on URL)
 
 `https://github.com/organizations/<org>/settings/installations/<installation ID>`
 
-To activate app authentication, just set the following CLI argument
-
-`--github-app-id <app-id>` or `GH_APP_ID` environment variable
-`--github-app-source-installation-id <installation-id>` or `GH_APP_SOURCE_INSTALLATION_ID` environment variable
-`--github-app-target-installation-id <installation-id>` or `GH_APP_TARGET_INSTALLATION_ID` environment variable
-`--github-app-private-key <path-to-private-key>` or `GH_APP_PRIVATE_KEY` environment variable
-
 # Subcommands
 
 - `validate`: Validate the configuration and environment variables (work in progress)
@@ -112,36 +102,63 @@ To activate app authentication, just set the following CLI argument
 - `build-metadata`: Collect metadata for the given plugin and have them on the local cache
 - `recipes`: List available recipes
 
-## CLI Options
-- `--plugins` or `-p`: (optional) Name(s) of plugin directory cloned inside the `test-plugins` directory.
+## Global option
 
-- `--recipe` or `-r`: (required) Name of recipe to apply to the plugins.
+- `--debug` or `-d`: (optional) Enables debug mode. Defaults to false.
 
-- `--plugin-file` or `-f`: (optional) Path to the text file that contains a list of plugins. (see example [plugin file](docs/example-plugins.txt))
-
-- `--skip-push` (optional) Skips pushing changes to the remote repository. Always enabled in dry-run mode.
-
-- `--skip-pull-request` (optional) Skips creating pull requests in the remote repository. Always enabled in dry-run mode.
-
-- `--clean-local-data` (optional) Deletes the local plugin directory before and after the process is completed.
-
-- `--clean-forks` (optional) Remove forked repositories before and after the modernization process. Might cause data loss if you have other changes pushed on those forks. Forks with open pull request targeting original repo are not removed to prevent closing unmerged pull requests.
-
-- `--export-datatables` or `-e`: (optional) Creates a report or summary of the changes made through OpenRewrite in CSV format. The report will be generated at `target/rewrite/datatables` inside the plugin directory.
-
-- `--debug` or `-d`: (optional) Enables debug mode.
-
-- `--jenkins-update-center`: (optional) Sets main update center; will override JENKINS_UC environment variable. If not set via CLI option or environment variable, will default to url in [properties file](plugin-modernizer-core/src/main/resources/urls.properties)
-
-- `--jenkins-plugins-stats-installations-url` (optional) Set the URL for the Jenkins Plugins Stats installations API. If not set via CLI option or environment variable, will default to url in [properties file](plugin-modernizer-core/src/main/resources/urls.properties)
 
 - `--cache-path` or `-c`: (optional) Custom path to the cache directory. Defaults to `${user.home}/.cache/jenkins-plugin-modernizer-cli`.
 
-- `--github-owner` or `-g`: (optional) GitHub owner for forked repositories. Can also be set via the environment variable `GH_OWNER` or `GITHUB_OWNER`.
 
 - `--maven-home` or `-m`: (optional) Path to the Maven home directory. Required if both `MAVEN_HOME` and `M2_HOME` environment variables are not set. The minimum required version is 3.9.7.
 
+
+- `--clean-local-data` (optional) Deletes the local plugin directory before running the tool.
+
+
 - `--version` or `-v`: (optional) Displays the version of the Plugin Modernizer tool.
+
+
+- `--help` or `-h`: (optional) Displays the help
+
+## GitHub options
+
+- `--github-owner` or `-g`: (Mandatory or optional if using GitHub app authentication) GitHub owner for forked repositories. Can also be set via the environment variable `GH_OWNER` or `GITHUB_OWNER`. Default to owner of the `GH_TOKEN`.
+
+
+- `--github-app-id <app-id>`: (optional) The GitHub application if using app authentication. Defaults to `GH_APP_ID` environment variable if set.
+
+
+- `--github-app-source-installation-id <installation-id>`: (optional) The GitHub app installation id for forked repositories. Defaults `GH_APP_SOURCE_INSTALLATION_ID` environment variable if set.
+
+
+- `--github-app-target-installation-id <installation-id>`: (optional) The GitHub app installation id for repositories. Defaults `GH_APP_TARGET_INSTALLATION_ID` environment variable if set.- `--github-app-private-key <path-to-private-key>`: (optional)  or `GH_APP_PRIVATE_KEY` environment variable
+
+# Run option
+
+- `--plugins` or `-p`: (optional) Name(s) of plugin directory cloned inside the `test-plugins` directory.
+
+
+- `--plugin-file` or `-f`: (optional) Path to the text file that contains a list of plugins. (see example [plugin file](docs/example-plugins.txt))
+
+
+- `--recipe` or `-r`: (required) Name of recipe to apply to the plugins.
+
+
+- `--clean-forks` (optional) Remove forked repositories before and after the modernization process. Might cause data loss if you have other changes pushed on those forks. Forks with open pull request targeting original repo are not removed to prevent closing unmerged pull requests.
+
+
+- `--jenkins-update-center`: (optional) Sets main update center; will override JENKINS_UC environment variable. If not set via CLI option or environment variable, will default https://updates.jenkins.io/current/update-center.actual.json
+
+- `--jenkins-plugin-info`: (optional) Set the URL for the Jenkins Plugin Info API. If not set via CLI option or environment variable, will default to https://updates.jenkins.io/current/plugin-versions.json
+
+- `--jenkins-plugins-stats-installations-url` (optional) Set the URL for the Jenkins Plugins Stats installations API. If not set via CLI option or environment variable, will default to url in [properties file](plugin-modernizer-core/src/main/resources/urls.properties)
+
+
+- `--plugin-health-score-url` (optional) Set the URL for the Plugin Health Score API. If not set via CLI option or environment variable, will default to https://plugin-health.jenkins.io/api/scores
+
+
+- `--github-api-url` (optional) Set the URL for the GitHub API. If not set via CLI option or environment variable, will default to `https://api.github.com`. Automatically set if `GH_HOST` environment variable is set.
 
 ## Plugin Input Format
 
@@ -154,7 +171,7 @@ Plugins can be passed to the CLI tool in two ways:
 Pass the plugin names directly using the `-p` or `--plugins option`. The expected input format for plugins is `artifact ID`.
 
 ```shell
-java -jar plugin-modernizer-cli/target/jenkins-plugin-modernizer-999999-SNAPSHOT.jar --plugins git,git-client,jobcacher --recipe AddPluginsBom
+plugin-modernizer --plugins git,git-client,jobcacher --recipe AddPluginsBom
 ```
 Here, `git`, `git-client`, and `jobcacher` are plugin artifact IDs (also known as plugin names), while `AddPluginsBom` and `AddCodeOwners` are recipe names. For more details about available recipes, refer to the [recipe_data.yaml](plugin-modernizer-core/src/main/resources/recipe_data.yaml) file.
 
@@ -164,7 +181,7 @@ Pass the path to a file that contains plugin names. The expected input format fo
 See example [plugin file](docs/example-plugins.txt)
 
 ```shell
-java -jar plugin-modernizer-cli/target/jenkins-plugin-modernizer-999999-SNAPSHOT.jar run --plugin-file path/to/plugin-file --recipe AddPluginsBom
+plugin-modernizer run --plugin-file path/to/plugin-file --recipe AddPluginsBom
 ```
 
 ## Configuring Environmental Variables
@@ -183,14 +200,14 @@ java -jar plugin-modernizer-cli/target/jenkins-plugin-modernizer-999999-SNAPSHOT
 ### without dry-run
 
 ```shell
-java -jar plugin-modernizer-cli/target/jenkins-plugin-modernizer-999999-SNAPSHOT.jar run --plugins git,git-client,jobcacher --recipe AddPluginsBom
+plugin-modernizer run --plugins git,git-client,jobcacher --recipe AddPluginsBom
 ```
 The above command creates pull requests in the respective remote repositories after applying the changes.
 
 ### with dry-run
 
 ```shell
-java -jar plugin-modernizer-cli/target/jenkins-plugin-modernizer-999999-SNAPSHOT.jar run --plugins git,git-client,jobcacher --recipe AddPluginsBom --dry-run
+plugin-modernizer run --plugins git,git-client,jobcacher --recipe AddPluginsBom --dry-run
 ```
 
 The above command generates patch files instead of applying changes directly. These patch files are saved in `/target/rewrite/rewrite.patch` inside each plugin directory. No pull requests will be created.
@@ -201,7 +218,7 @@ The above command generates patch files instead of applying changes directly. Th
 ### with export-datatables
 
 ```shell
-java -jar plugin-modernizer-cli/target/jenkins-plugin-modernizer-999999-SNAPSHOT.jar dry-run --plugins git,git-client,jobcacher --recipe AddPluginsBom --export-datatables
+plugin-modernizer dry-run --plugins git,git-client,jobcacher --recipe AddPluginsBom --export-datatables
 ```
 
 The above command creates a report of the changes made through OpenRewrite in csv format. The report will be generated in `target/rewrite/datatables` inside the plugin directory.

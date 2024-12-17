@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
+import io.jenkins.tools.pluginmodernizer.core.model.Recipe;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -14,7 +15,6 @@ import java.util.List;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.openrewrite.Recipe;
 
 public class ConfigTest {
 
@@ -40,11 +40,7 @@ public class ConfigTest {
                 .withCachePath(cachePath)
                 .withMavenHome(mavenHome)
                 .withDryRun(dryRun)
-                .withSkipPullRequest(true)
-                .withSkipPush(true)
-                .withExportDatatables(true)
                 .withRemoveForks(true)
-                .withRemoveLocalData(true)
                 .build();
 
         assertEquals(version, config.getVersion());
@@ -55,12 +51,9 @@ public class ConfigTest {
         assertEquals(cachePath, config.getCachePath());
         assertEquals(mavenHome, config.getMavenHome());
         assertTrue(config.isRemoveForks());
-        assertTrue(config.isSkipPush());
-        assertTrue(config.isSkipPullRequest());
         assertTrue(config.isRemoveForks());
-        assertTrue(config.isRemoveLocalData());
-        assertTrue(config.isExportDatatables());
         assertTrue(config.isDryRun());
+        assertEquals("https://api.github.com", config.getGithubApiUrl().toString());
     }
 
     @Test
@@ -74,11 +67,7 @@ public class ConfigTest {
         assertEquals(Settings.DEFAULT_CACHE_PATH, config.getCachePath());
         assertEquals(Settings.DEFAULT_MAVEN_HOME, config.getMavenHome());
         assertFalse(config.isRemoveForks());
-        assertFalse(config.isSkipPush());
-        assertFalse(config.isSkipPullRequest());
         assertFalse(config.isRemoveForks());
-        assertFalse(config.isRemoveLocalData());
-        assertFalse(config.isExportDatatables());
         assertFalse(config.isDryRun());
     }
 
