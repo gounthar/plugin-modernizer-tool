@@ -1,6 +1,10 @@
 package io.jenkins.tools.pluginmodernizer.core.extractor;
 
 import io.jenkins.tools.pluginmodernizer.core.config.RecipesConsts;
+import io.jenkins.tools.pluginmodernizer.core.utils.CustomStaxParser;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import org.openrewrite.marker.Markers;
@@ -70,6 +74,19 @@ public class PomResolutionVisitor extends MavenIsoVisitor<PluginMetadata> {
         pluginMetadata.setProperties(properties);
         pluginMetadata.setJenkinsVersion(
                 resolvedPom.getManagedVersion("org.jenkins-ci.main", "jenkins-core", null, null));
+
+        // Use custom STAX parser to preserve formatting and whitespace
+        try {
+            CustomStaxParser customStaxParser = new CustomStaxParser();
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            customStaxParser.parse(
+                    new ByteArrayInputStream(document.print().getBytes(StandardCharsets.UTF_8)),
+                    outputStream);
+            String formattedXml = outputStream.toString(StandardCharsets.UTF_8);
+            document = Xml.Document.build(formattedXml);
+        } catch (Exception e) {
+            LOG.error("Error using custom STAX parser: " + e.getMessage(), e);
+        }
 
         return document;
     }

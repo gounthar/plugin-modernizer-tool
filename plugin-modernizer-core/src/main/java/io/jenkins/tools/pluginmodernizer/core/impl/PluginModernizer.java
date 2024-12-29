@@ -8,6 +8,7 @@ import io.jenkins.tools.pluginmodernizer.core.github.GHService;
 import io.jenkins.tools.pluginmodernizer.core.model.JDK;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
 import io.jenkins.tools.pluginmodernizer.core.model.PluginProcessingException;
+import io.jenkins.tools.pluginmodernizer.core.utils.CustomStaxParser;
 import io.jenkins.tools.pluginmodernizer.core.utils.PluginService;
 import jakarta.inject.Inject;
 import java.util.List;
@@ -33,6 +34,9 @@ public class PluginModernizer {
 
     @Inject
     private CacheManager cacheManager;
+
+    @Inject
+    private CustomStaxParser customStaxParser;
 
     /**
      * Validate the configuration

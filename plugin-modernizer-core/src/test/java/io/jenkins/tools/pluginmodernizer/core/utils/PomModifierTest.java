@@ -190,4 +190,26 @@ public class PomModifierTest {
         Node relativePathNode = relativePathList.item(0);
         assertTrue(relativePathNode.getTextContent().isEmpty(), "The relativePath element should be self-closing");
     }
+
+    /**
+     * Tests the formatting preservation of the custom STAX parser.
+     *
+     * @throws Exception if an error occurs during the test
+     */
+    @Test
+    public void testCustomStaxParserFormatting() throws Exception {
+        CustomStaxParser customStaxParser = new CustomStaxParser();
+        Path inputPath = Paths.get(TEST_POM_PATH);
+        Path outputPath = Paths.get(OUTPUT_POM_PATH);
+
+        try (InputStream inputStream = Files.newInputStream(inputPath);
+             OutputStream outputStream = Files.newOutputStream(outputPath)) {
+            customStaxParser.parse(inputStream, outputStream);
+        }
+
+        String originalContent = new String(Files.readAllBytes(inputPath));
+        String parsedContent = new String(Files.readAllBytes(outputPath));
+
+        assertEquals(originalContent, parsedContent, "The custom STAX parser should preserve formatting and whitespace");
+    }
 }
