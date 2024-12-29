@@ -189,5 +189,10 @@ public class PomModifierTest {
         assertEquals(1, relativePathList.getLength(), "There should be one relativePath element");
         Node relativePathNode = relativePathList.item(0);
         assertTrue(relativePathNode.getTextContent().isEmpty(), "The relativePath element should be self-closing");
+
+        // Verify that the original XML formatting is preserved
+        String originalContent = new String(Files.readAllBytes(Paths.get(TEST_POM_PATH)));
+        String modifiedContent = new String(Files.readAllBytes(Paths.get(OUTPUT_POM_PATH)));
+        assertTrue(modifiedContent.contains(originalContent.trim()), "Original XML formatting should be preserved");
     }
 }

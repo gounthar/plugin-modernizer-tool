@@ -2,6 +2,7 @@ package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -10,6 +11,11 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.stream.XMLEventReader;
+import javax.xml.stream.XMLEventWriter;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.events.XMLEvent;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -29,6 +35,7 @@ public class PomModifier {
 
     private static final Logger LOG = LoggerFactory.getLogger(PomModifier.class);
     private final Document document;
+    private final Path pomFilePath;
 
     /**
      * Constructor for PomModifier.
@@ -40,12 +47,12 @@ public class PomModifier {
     public PomModifier(String pomFilePath) {
         try {
             // Validate the file path
-            Path path = Paths.get(pomFilePath).normalize().toAbsolutePath();
-            if (!Files.exists(path) || !Files.isRegularFile(path)) {
-                throw new IllegalArgumentException("Invalid file path: " + path);
+            this.pomFilePath = Paths.get(pomFilePath).normalize().toAbsolutePath();
+            if (!Files.exists(this.pomFilePath) || !Files.isRegularFile(this.pomFilePath)) {
+                throw new IllegalArgumentException("Invalid file path: " + this.pomFilePath);
             }
 
-            File pomFile = path.toFile();
+            File pomFile = this.pomFilePath.toFile();
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             dbFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
@@ -271,33 +278,42 @@ public class PomModifier {
     }
 
     /**
-     * Adds a self-closing relativePath tag to the parent tag in the POM file.
+     * Adds a self-closing relativePath tag to the parent tag in the POM file using a STAX parser.
      */
     public void addRelativePath() {
-        NodeList parentList = document.getElementsByTagName("parent");
-        if (parentList.getLength() == 0) {
-            LOG.warn("No parent tag found in POM file");
-            return;
-        }
-
         try {
-            Node parentNode = parentList.item(0);
-            NodeList childNodes = parentNode.getChildNodes();
-            boolean relativePathExists = false;
-            for (int i = 0; i < childNodes.getLength(); i++) {
-                Node node = childNodes.item(i);
-                if (node.getNodeType() == Node.ELEMENT_NODE
-                        && node.getNodeName().equals("relativePath")) {
-                    relativePathExists = true;
-                    LOG.debug("relativePath tag already exists");
-                    break;
+            XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+            XMLEventReader reader = inputFactory.createXMLEventReader(Files.newInputStream(pomFilePath));
+
+            StringWriter stringWriter = new StringWriter();
+            XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+            XMLEventWriter writer = outputFactory.createXMLEventWriter(stringWriter);
+
+            boolean parentTagOpen = false;
+            boolean relativePathAdded = false;
+
+            while (reader.hasNext()) {
+                XMLEvent event = reader.nextEvent();
+                writer.add(event);
+
+                if (event.isStartElement() && event.asStartElement().getName().getLocalPart().equals("parent")) {
+                    parentTagOpen = true;
+                }
+
+                if (parentTagOpen && event.isEndElement() && event.asEndElement().getName().getLocalPart().equals("parent")) {
+                    if (!relativePathAdded) {
+                        writer.add(outputFactory.createStartElement("", "", "relativePath"));
+                        writer.add(outputFactory.createEndElement("", "", "relativePath"));
+                        relativePathAdded = true;
+                    }
+                    parentTagOpen = false;
                 }
             }
-            if (!relativePathExists) {
-                Element relativePathElement = document.createElement("relativePath");
-                parentNode.appendChild(relativePathElement);
-                LOG.debug("Added relativePath tag to parent");
-            }
+
+            writer.close();
+            reader.close();
+
+            Files.write(pomFilePath, stringWriter.toString().getBytes());
         } catch (Exception e) {
             LOG.error("Error adding relativePath tag: " + e.getMessage(), e);
             throw new RuntimeException("Failed to add relativePath tag", e);
