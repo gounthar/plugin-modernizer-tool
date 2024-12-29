@@ -314,49 +314,63 @@ public class PomModifier {
      * Adds a self-closing relativePath tag to the parent tag in the POM file using a STAX parser.
      */
     public void addRelativePath() {
-    try {
-        XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-        XMLEventReader reader = inputFactory.createXMLEventReader(Files.newInputStream(pomFilePath));
+        try {
+            XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+            // Preserve CDATA and comments
+            inputFactory.setProperty(XMLInputFactory.IS_COALESCING, false);
+            inputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, false);
+            XMLEventReader reader = inputFactory.createXMLEventReader(Files.newInputStream(pomFilePath));
 
-        StringWriter stringWriter = new StringWriter();
-        XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
-        XMLEventWriter writer = outputFactory.createXMLEventWriter(stringWriter);
+            StringWriter stringWriter = new StringWriter();
+            XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+            XMLEventWriter writer = outputFactory.createXMLEventWriter(stringWriter);
 
-        boolean parentTagOpen = false;
-        boolean relativePathAdded = false;
+            boolean parentTagOpen = false;
+            boolean relativePathAdded = false;
 
-        while (reader.hasNext()) {
-            XMLEvent event = reader.nextEvent();
+            while (reader.hasNext()) {
+                XMLEvent event = reader.nextEvent();
 
-            if (event.isStartElement() && event.asStartElement().getName().getLocalPart().equals("parent")) {
-                parentTagOpen = true;
-            }
-
-            if (parentTagOpen && event.isEndElement() && event.asEndElement().getName().getLocalPart().equals("parent")) {
-                if (!relativePathAdded) {
-                    XMLEventFactory eventFactory = XMLEventFactory.newInstance();
-                    StartElement startElement = eventFactory.createStartElement("", "", "relativePath");
-                    EndElement endElement = eventFactory.createEndElement("", "", "relativePath");
-                    writer.add(startElement);
-                    writer.add(eventFactory.createCharacters(""));
-                    writer.add(endElement);
-                    relativePathAdded = true;
+                if (event.isStartElement() && event.asStartElement().getName().getLocalPart().equals("parent")) {
+                    parentTagOpen = true;
+                    // Check if relativePath already exists to avoid duplicates
+                    XMLEvent peek = reader.peek();
+                    while (peek != null && !peek.isEndElement()) {
+                        if (peek.isStartElement() &&
+                                peek.asStartElement().getName().getLocalPart().equals("relativePath")) {
+                            relativePathAdded = true;
+                            break;
+                        }
+                        peek = reader.peek();
+                    }
                 }
-                parentTagOpen = false;
+
+                if (parentTagOpen && event.isEndElement() && event.asEndElement().getName().getLocalPart().equals("parent")) {
+                    if (!relativePathAdded) {
+                        XMLEventFactory eventFactory = XMLEventFactory.newInstance();
+                        StartElement startElement = eventFactory.createStartElement("", "", "relativePath");
+                        EndElement endElement = eventFactory.createEndElement("", "", "relativePath");
+                        writer.add(startElement);
+                        writer.add(eventFactory.createCharacters(""));
+                        writer.add(endElement);
+                        relativePathAdded = true;
+                    }
+                    parentTagOpen = false;
+                }
+
+                writer.add(event);
             }
 
-            writer.add(event);
+            writer.close();
+            reader.close();
+
+            Files.write(pomFilePath, stringWriter.toString().getBytes());
+        } catch (Exception e) {
+            String errorMessage = String.format("Failed to add relativePath tag to %s: %s", pomFilePath, e.getMessage());
+            LOG.error(errorMessage, e);
+            throw new RuntimeException(errorMessage, e);
         }
-
-        writer.close();
-        reader.close();
-
-        Files.write(pomFilePath, stringWriter.toString().getBytes());
-    } catch (Exception e) {
-        LOG.error("Error adding relativePath tag: " + e.getMessage(), e);
-        throw new RuntimeException("Failed to add relativePath tag", e);
     }
-}
 
     /**
      * Saves the modified POM file to the specified output path.
