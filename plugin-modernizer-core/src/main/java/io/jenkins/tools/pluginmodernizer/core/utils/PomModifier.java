@@ -1,6 +1,7 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.File;
 import java.io.StringWriter;
 import java.nio.file.Files;
@@ -11,10 +12,9 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.stream.XMLEventReader;
-import javax.xml.stream.XMLEventWriter;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.*;
+import javax.xml.stream.events.EndElement;
+import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -23,6 +23,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -81,6 +82,7 @@ public class PomModifier {
 
     /**
      * Return the packaging type of the POM file.
+     *
      * @return the packaging type or null if not found
      */
     public String getPackaging() {
@@ -95,6 +97,7 @@ public class PomModifier {
 
     /**
      * Return the groupId of the POM file.
+     *
      * @return the groupId or null if not found
      */
     public String getArtifactId() {
@@ -131,14 +134,14 @@ public class PomModifier {
                             Node previousNode = childNodes.item(j);
                             if (previousNode.getNodeType() == Node.COMMENT_NODE
                                     || (previousNode.getNodeType() == Node.TEXT_NODE
-                                            && previousNode
-                                                    .getTextContent()
-                                                    .trim()
-                                                    .startsWith("<!--"))
+                                    && previousNode
+                                    .getTextContent()
+                                    .trim()
+                                    .startsWith("<!--"))
                                     || previousNode
-                                            .getTextContent()
-                                            .replaceAll("\\s+", "")
-                                            .isEmpty()) {
+                                    .getTextContent()
+                                    .replaceAll("\\s+", "")
+                                    .isEmpty()) {
                                 nodesToRemove.add(previousNode);
                                 j--;
                             } else {
@@ -332,8 +335,11 @@ public class PomModifier {
 
                 if (parentTagOpen && event.isEndElement() && event.asEndElement().getName().getLocalPart().equals("parent")) {
                     if (!relativePathAdded) {
-                        writer.add(outputFactory.createStartElement("", "", "relativePath"));
-                        writer.add(outputFactory.createEndElement("", "", "relativePath"));
+                        XMLEventFactory eventFactory = XMLEventFactory.newInstance();
+                        StartElement startElement = eventFactory.createStartElement("", "", "relativePath");
+                        EndElement endElement = eventFactory.createEndElement("", "", "relativePath");
+                        writer.add(startElement);
+                        writer.add(endElement);
                         relativePathAdded = true;
                     }
                     parentTagOpen = false;
