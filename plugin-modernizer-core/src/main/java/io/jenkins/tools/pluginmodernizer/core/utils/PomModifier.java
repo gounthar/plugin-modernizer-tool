@@ -87,6 +87,10 @@ public class PomModifier {
      * @return the packaging type or null if not found
      */
     public String getPackaging() {
+        if (document == null) {
+            LOG.warn("Document is null for {}", pomFilePath);
+            return null;
+        }
         XPath xPath = XPathFactory.newInstance().newXPath();
         try {
             String packaging = xPath.compile("/project/packaging").evaluate(document);
@@ -103,6 +107,10 @@ public class PomModifier {
      * @return the groupId or null if not found
      */
     public String getArtifactId() {
+        if (document == null) {
+            LOG.warn("Document is null for {}", pomFilePath);
+            return null;
+        }
         XPath xPath = XPathFactory.newInstance().newXPath();
         try {
             return xPath.compile("/project/artifactId").evaluate(document);
