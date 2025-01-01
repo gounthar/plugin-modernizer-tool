@@ -53,6 +53,8 @@ public class PomModifier {
             this.pomFilePath = Paths.get(pomFilePath).normalize().toAbsolutePath();
             if (!Files.exists(this.pomFilePath) || !Files.isRegularFile(this.pomFilePath)) {
                 throw new IllegalArgumentException("Invalid file path: " + this.pomFilePath);
+            } else if (!Files.isReadable(this.pomFilePath)) {
+                throw new IllegalArgumentException("File is not readable: " + this.pomFilePath);
             }
 
             File pomFile = this.pomFilePath.toFile();
