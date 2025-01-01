@@ -1,9 +1,6 @@
 package io.jenkins.tools.pluginmodernizer.cli;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
@@ -339,6 +336,46 @@ public class CommandLineITCase {
                     () -> assertEquals(0, result2.getExitCode()),
                     () -> assertTrue(Files.readAllLines(logFile2).stream()
                             .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were commited on (.*)"))));
+        }
+    }
+
+    @Test
+    public void testRunAddDependabot(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
+
+        Path logFile = setupLogs("testRunAddDependabot");
+
+        final String plugin = "empty";
+        final String recipe = "SetupDependabot";
+
+        // Junit attachment with logs file for the plugin build
+        System.out.printf(
+                "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+        System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
+
+        try (GitHubServerContainer gitRemote = new GitHubServerContainer(wmRuntimeInfo, keysPath, plugin, "main")) {
+
+            gitRemote.start();
+
+            Invoker invoker = buildInvoker();
+            InvocationRequest request = buildRequest(
+                    "run --recipe %s %s".formatted(recipe, getRunArgs(wmRuntimeInfo, Plugin.build(plugin))), logFile);
+            InvocationResult result = invoker.execute(request);
+
+            // Assert output
+            assertAll(
+                    () -> assertEquals(0, result.getExitCode()),
+                    () -> assertTrue(Files.readAllLines(logFile).stream()
+                            .anyMatch(line -> line.matches("(.*)Pull request was open on (.*)"))));
+
+            // Check that new file was created
+            assertTrue(
+                    Files.exists(cachePath
+                            .resolve("jenkins-plugin-modernizer-cli")
+                            .resolve(plugin)
+                            .resolve("sources")
+                            .resolve(".github")
+                            .resolve("dependabot.yml")),
+                    "Dependabot file was not created");
         }
     }
 

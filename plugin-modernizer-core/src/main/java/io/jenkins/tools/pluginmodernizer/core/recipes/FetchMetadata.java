@@ -2,9 +2,10 @@ package io.jenkins.tools.pluginmodernizer.core.recipes;
 
 import io.jenkins.tools.pluginmodernizer.core.extractor.MetadataVisitor;
 import io.jenkins.tools.pluginmodernizer.core.extractor.PluginMetadata;
-import org.openrewrite.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.openrewrite.ExecutionContext;
+import org.openrewrite.Recipe;
+import org.openrewrite.RecipeList;
+import org.openrewrite.TreeVisitor;
 
 /**
  * Recipe to fetch metadata from source files and store it in the target directory.
@@ -13,11 +14,6 @@ import org.slf4j.LoggerFactory;
  * See {@link PluginMetadata} for the metadata structure.
  */
 public class FetchMetadata extends Recipe {
-
-    /**
-     * LOGGER.
-     */
-    private static final Logger LOG = LoggerFactory.getLogger(FetchMetadata.class);
 
     @Override
     public String getDisplayName() {

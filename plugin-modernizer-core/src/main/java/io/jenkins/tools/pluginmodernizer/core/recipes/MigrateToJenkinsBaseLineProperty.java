@@ -4,9 +4,13 @@ import io.jenkins.tools.pluginmodernizer.core.extractor.PluginMetadata;
 import io.jenkins.tools.pluginmodernizer.core.extractor.PomResolutionVisitor;
 import io.jenkins.tools.pluginmodernizer.core.visitors.AddBeforePropertyVisitor;
 import io.jenkins.tools.pluginmodernizer.core.visitors.AddPropertyCommentVisitor;
+import io.jenkins.tools.pluginmodernizer.core.visitors.UpdateBomVersionVisitor;
 import org.jspecify.annotations.Nullable;
-import org.openrewrite.*;
 import org.openrewrite.Cursor;
+import org.openrewrite.ExecutionContext;
+import org.openrewrite.Recipe;
+import org.openrewrite.Tree;
+import org.openrewrite.TreeVisitor;
 import org.openrewrite.maven.AddPropertyVisitor;
 import org.openrewrite.maven.ChangeManagedDependencyGroupIdAndArtifactId;
 import org.openrewrite.maven.MavenIsoVisitor;
@@ -114,15 +118,11 @@ public class MigrateToJenkinsBaseLineProperty extends Recipe {
                 maybeUpdateModel();
             }
 
-            // Change the bom artifact ID
-            Xml.Tag bom = document.getRoot()
-                    .getChild("dependencyManagement")
-                    .flatMap(dm -> dm.getChild("dependencies"))
-                    .flatMap(deps -> deps.getChild("dependency"))
-                    .filter(dep -> dep.getChildValue("groupId")
-                            .map("io.jenkins.tools.bom"::equals)
-                            .orElse(false))
-                    .orElseThrow();
+            // Get the bom tag
+            Xml.Tag bom = UpdateBomVersionVisitor.getBomTag(document);
+            if (bom == null) {
+                return;
+            }
 
             Xml.Tag artifactIdTag = bom.getChild("artifactId").orElseThrow();
             Xml.Tag version = bom.getChild("version").orElseThrow();

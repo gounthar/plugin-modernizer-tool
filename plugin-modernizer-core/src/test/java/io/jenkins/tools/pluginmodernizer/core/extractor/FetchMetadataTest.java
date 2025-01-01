@@ -8,8 +8,8 @@ import static org.openrewrite.test.SourceSpecs.text;
 import static org.openrewrite.yaml.Assertions.yaml;
 
 import io.jenkins.tools.pluginmodernizer.core.model.JDK;
+import io.jenkins.tools.pluginmodernizer.core.model.Platform;
 import io.jenkins.tools.pluginmodernizer.core.recipes.FetchMetadata;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -30,15 +30,17 @@ public class FetchMetadataTest implements RewriteTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(FetchMetadataTest.class);
 
-    private static final PluginMetadata EXPECTED_POM_METADATA;
+    private static final PluginMetadata EXPECTED_METADATA;
 
     static {
-        EXPECTED_POM_METADATA = new PluginMetadata();
-        EXPECTED_POM_METADATA.setPluginName("GitLab Plugin");
-        EXPECTED_POM_METADATA.setParentVersion("4.80");
-        EXPECTED_POM_METADATA.setJenkinsVersion("2.426.3");
-        EXPECTED_POM_METADATA.setBomArtifactId("bom-2.414.x");
-        EXPECTED_POM_METADATA.setBomVersion("2950.va_633b_f42f759");
+        EXPECTED_METADATA = new PluginMetadata();
+        EXPECTED_METADATA.setPluginName("GitLab Plugin");
+        EXPECTED_METADATA.setParentVersion("4.80");
+        EXPECTED_METADATA.setJenkinsVersion("2.426.3");
+        EXPECTED_METADATA.setBomArtifactId("bom-2.414.x");
+        EXPECTED_METADATA.setBomVersion("2950.va_633b_f42f759");
+        EXPECTED_METADATA.setUseContainerAgent(null);
+        EXPECTED_METADATA.setForkCount(null);
         Map<String, String> properties = new LinkedHashMap<>();
         properties.put("revision", "1.8.1");
         properties.put("java.level", "8");
@@ -50,17 +52,17 @@ public class FetchMetadataTest implements RewriteTest {
         properties.put("hpi.compatibleSinceVersion", "1.4.0");
         properties.put("mockserver.version", "5.15.0");
         properties.put("spotless.check.skip", "false");
-        EXPECTED_POM_METADATA.setProperties(properties);
+        EXPECTED_METADATA.setProperties(properties);
         List<ArchetypeCommonFile> commonFiles = new LinkedList<>();
         commonFiles.add(ArchetypeCommonFile.JENKINSFILE);
         commonFiles.add(ArchetypeCommonFile.POM);
-        EXPECTED_POM_METADATA.setCommonFiles(commonFiles);
+        EXPECTED_METADATA.setCommonFiles(commonFiles);
         Set<MetadataFlag> flags = new LinkedHashSet<>();
         flags.add(MetadataFlag.DEVELOPER_SET);
         flags.add(MetadataFlag.LICENSE_SET);
         flags.add(MetadataFlag.SCM_HTTPS);
         flags.add(MetadataFlag.MAVEN_REPOSITORIES_HTTPS);
-        EXPECTED_POM_METADATA.setFlags(flags);
+        EXPECTED_METADATA.setFlags(flags);
     }
 
     @Language("xml")
@@ -192,12 +194,56 @@ public class FetchMetadataTest implements RewriteTest {
         assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.POM));
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(0, jdkVersion.size());
-        assertEquals(EXPECTED_POM_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
-        assertEquals(EXPECTED_POM_METADATA.getPluginName(), pluginMetadata.getPluginName());
-        assertEquals(EXPECTED_POM_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
-        assertEquals(EXPECTED_POM_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
-        assertEquals(EXPECTED_POM_METADATA.getProperties(), pluginMetadata.getProperties());
-        assertEquals(EXPECTED_POM_METADATA.getFlags(), pluginMetadata.getFlags());
+        assertEquals(EXPECTED_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
+        assertEquals(EXPECTED_METADATA.getPluginName(), pluginMetadata.getPluginName());
+        assertEquals(EXPECTED_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
+        assertEquals(EXPECTED_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
+        assertEquals(EXPECTED_METADATA.getProperties(), pluginMetadata.getProperties());
+        assertEquals(EXPECTED_METADATA.getFlags(), pluginMetadata.getFlags());
+
+        // Only pom here
+        assertEquals(List.of(ArchetypeCommonFile.POM), pluginMetadata.getCommonFiles());
+    }
+
+    @Test
+    void testWithDifferentParent() throws Exception {
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=xml
+                pomXml(
+                        """
+                 <?xml version="1.0" encoding="UTF-8"?>
+                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                   <modelVersion>4.0.0</modelVersion>
+                   <parent>
+                     <groupId>org.jvnet.hudson.plugins</groupId>
+                     <artifactId>analysis-pom</artifactId>
+                     <version>10.0.0</version>
+                     <relativePath />
+                   </parent>
+                   <groupId>io.jenkins.plugins</groupId>
+                   <artifactId>check</artifactId>
+                   <version>1.0.0-SNAPSHOT</version>
+                   <packaging>hpi</packaging>
+                   <name>Check Plugin</name>
+                   <repositories>
+                     <repository>
+                       <id>repo.jenkins-ci.org</id>
+                       <url>https://repo.jenkins-ci.org/public/</url>
+                     </repository>
+                   </repositories>
+                 </project>
+                 """));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        assertNotNull(pluginMetadata, "Plugin metadata was not written by the recipe");
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.POM));
+
+        // Check metadata
+        assertEquals("5.2", pluginMetadata.getParentVersion());
+        assertEquals("Check Plugin", pluginMetadata.getPluginName());
+        assertEquals("2.479.1", pluginMetadata.getJenkinsVersion());
+        assertEquals("3654.v237e4a_f2d8da_", pluginMetadata.getBomVersion());
 
         // Only pom here
         assertEquals(List.of(ArchetypeCommonFile.POM), pluginMetadata.getCommonFiles());
@@ -237,12 +283,12 @@ public class FetchMetadataTest implements RewriteTest {
         assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.POM));
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(0, jdkVersion.size());
-        assertEquals(EXPECTED_POM_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
-        assertEquals(EXPECTED_POM_METADATA.getPluginName(), pluginMetadata.getPluginName());
-        assertEquals(EXPECTED_POM_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
-        assertEquals(EXPECTED_POM_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
-        assertEquals(EXPECTED_POM_METADATA.getProperties(), pluginMetadata.getProperties());
-        assertEquals(EXPECTED_POM_METADATA.getFlags(), pluginMetadata.getFlags());
+        assertEquals(EXPECTED_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
+        assertEquals(EXPECTED_METADATA.getPluginName(), pluginMetadata.getPluginName());
+        assertEquals(EXPECTED_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
+        assertEquals(EXPECTED_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
+        assertEquals(EXPECTED_METADATA.getProperties(), pluginMetadata.getProperties());
+        assertEquals(EXPECTED_METADATA.getFlags(), pluginMetadata.getFlags());
 
         // Only pom here
         assertEquals(List.of(ArchetypeCommonFile.POM), pluginMetadata.getCommonFiles());
@@ -310,12 +356,13 @@ public class FetchMetadataTest implements RewriteTest {
         // Check rest
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(2, jdkVersion.size());
-        assertEquals(EXPECTED_POM_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
-        assertEquals(EXPECTED_POM_METADATA.getPluginName(), pluginMetadata.getPluginName());
-        assertEquals(EXPECTED_POM_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
-        assertEquals(EXPECTED_POM_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
-        assertEquals(EXPECTED_POM_METADATA.getProperties(), pluginMetadata.getProperties());
-        assertEquals(EXPECTED_POM_METADATA.getFlags(), pluginMetadata.getFlags());
+        assertTrue(pluginMetadata.isUseContainerAgent());
+        assertEquals(EXPECTED_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
+        assertEquals(EXPECTED_METADATA.getPluginName(), pluginMetadata.getPluginName());
+        assertEquals(EXPECTED_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
+        assertEquals(EXPECTED_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
+        assertEquals(EXPECTED_METADATA.getProperties(), pluginMetadata.getProperties());
+        assertEquals(EXPECTED_METADATA.getFlags(), pluginMetadata.getFlags());
     }
 
     @Test
@@ -326,7 +373,8 @@ public class FetchMetadataTest implements RewriteTest {
                 groovy(
                         """
                          buildPlugin(
-                         useContainerAgent: true,
+                         useContainerAgent: false,
+                         forkCount: '1C',
                          configurations: [
                                 [platform: 'linux', jdk: 21],
                                 [platform: 'windows', jdk: 17],
@@ -338,45 +386,22 @@ public class FetchMetadataTest implements RewriteTest {
         assertNotNull(pluginMetadata, "Plugin metadata was not written by the recipe");
         // Only Jenkinsfile here
         assertEquals(List.of(ArchetypeCommonFile.JENKINSFILE), pluginMetadata.getCommonFiles());
+
+        // Assert JDK
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(2, jdkVersion.size());
+        assertFalse(pluginMetadata.isUseContainerAgent());
+        assertEquals("1C", pluginMetadata.getForkCount());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
     }
 
     @Test
-    void testPluginWithJenkinsfileWithoutJdkInfo() throws Exception {
-        EXPECTED_POM_METADATA.setJdks(Set.of());
-        EXPECTED_POM_METADATA.setJdks(Collections.emptySet());
-        rewriteRun(
-                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
-                // language=groovy
-                groovy(
-                        """
-                          buildPlugin()
-                          """,
-                        spec -> spec.path("Jenkinsfile")),
-                pomXml(POM_XML));
-
-        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
-        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
-        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.POM));
-        Set<JDK> jdkVersion = pluginMetadata.getJdks();
-        assertEquals(0, jdkVersion.size());
-        assertEquals(EXPECTED_POM_METADATA.getParentVersion(), pluginMetadata.getParentVersion());
-        assertEquals(EXPECTED_POM_METADATA.getPluginName(), pluginMetadata.getPluginName());
-        assertEquals(EXPECTED_POM_METADATA.getJenkinsVersion(), pluginMetadata.getJenkinsVersion());
-
-        assertEquals(EXPECTED_POM_METADATA.getBomVersion(), pluginMetadata.getBomVersion());
-        assertEquals(EXPECTED_POM_METADATA.getProperties(), pluginMetadata.getProperties());
-        assertEquals(EXPECTED_POM_METADATA.getFlags(), pluginMetadata.getFlags());
-        assertEquals(EXPECTED_POM_METADATA.getCommonFiles(), pluginMetadata.getCommonFiles());
-    }
-
-    @Test
-    void testPluginWithJenkinsfileWithJdkInfo() {
-        Set<JDK> jdks = new LinkedHashSet<>();
-        jdks.add(JDK.JAVA_21);
-        jdks.add(JDK.JAVA_17);
-        EXPECTED_POM_METADATA.setJdks(jdks);
+    void testPluginWithJenkinsfileWithJdkInfoConfiguration() {
         rewriteRun(
                 recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
                 // language=groovy
@@ -397,6 +422,127 @@ public class FetchMetadataTest implements RewriteTest {
         assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
         assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.POM));
 
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(2, jdkVersion.size());
+        assertTrue(jdkVersion.contains(JDK.JAVA_21));
+        assertTrue(jdkVersion.contains(JDK.JAVA_17));
+        assertTrue(pluginMetadata.isUseContainerAgent());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
+    void testPluginWithJenkinsfileWithJdkInfoVersion() {
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                         buildPlugin(
+                             jdkVersions: [21, 17]
+                         )
+                         """,
+                        spec -> spec.path("Jenkinsfile")));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        // Files are present
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(2, jdkVersion.size());
+        assertTrue(jdkVersion.contains(JDK.JAVA_21));
+        assertTrue(jdkVersion.contains(JDK.JAVA_17));
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
+    void testPluginWithJenkinsfileWithPlatformsOnly() {
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                         buildPlugin(
+                             platforms: ["linux", "windows"]
+                         )
+                         """,
+                        spec -> spec.path("Jenkinsfile")));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        // Files are present
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(1, jdkVersion.size());
+        assertTrue(jdkVersion.contains(JDK.JAVA_8));
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
+    void testPluginWithJenkinsfileWithJdkInfoVersionAndPlatform() {
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                         buildPlugin(
+                             platforms: ['linux'],
+                             jdkVersions: [21, 17]
+                         )
+                         """,
+                        spec -> spec.path("Jenkinsfile")));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        // Files are present
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(2, jdkVersion.size());
+        assertTrue(jdkVersion.contains(JDK.JAVA_21));
+        assertTrue(jdkVersion.contains(JDK.JAVA_17));
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(1, platforms.size());
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
+    void testPluginWithJenkinsfileWithJdkInfoVersionVar() {
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                         def versions = [21, 17]
+                         buildPlugin(
+                             jdkVersions: versions
+                         )
+                         """,
+                        spec -> spec.path("Jenkinsfile")));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        // Files are present
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(2, jdkVersion.size());
         assertTrue(jdkVersion.contains(JDK.JAVA_21));
@@ -404,11 +550,46 @@ public class FetchMetadataTest implements RewriteTest {
     }
 
     @Test
+    // Keep in sync with https://github.com/jenkins-infra/pipeline-library with default JDK
+    void testPluginWithJenkinsfileDefault() {
+
+        // Keep in sync with https://github.com/jenkins-infra/pipeline-library with default JDK and 2 platforms
+        EXPECTED_METADATA.addPlatform(Platform.LINUX, JDK.JAVA_8, null);
+        EXPECTED_METADATA.addPlatform(Platform.WINDOWS, JDK.JAVA_8, null);
+
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                         buildPlugin()
+                         """,
+                        spec -> spec.path("Jenkinsfile")));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        // Files are present
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(1, jdkVersion.size());
+        assertNull(pluginMetadata.isUseContainerAgent());
+        assertTrue(jdkVersion.contains(JDK.JAVA_8));
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
     void testJenkinsfileWithConfigurationsAsParameter() {
         Set<JDK> jdks = new LinkedHashSet<>();
         jdks.add(JDK.JAVA_11);
         jdks.add(JDK.JAVA_17);
-        EXPECTED_POM_METADATA.setJdks(jdks);
+        EXPECTED_METADATA.addPlatform(Platform.LINUX, JDK.JAVA_11, null);
+        EXPECTED_METADATA.addPlatform(Platform.WINDOWS, JDK.JAVA_17, null);
         rewriteRun(
                 recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
                 // language=groovy
@@ -433,8 +614,105 @@ public class FetchMetadataTest implements RewriteTest {
                 pomXml(POM_XML));
         PluginMetadata pluginMetadata = new PluginMetadata().refresh();
         assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert JDK
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(2, jdkVersion.size());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
+    void testJenkinsfileWithPlatfomsAndJdkVersionsAsParameter() {
+        Set<JDK> jdks = new LinkedHashSet<>();
+        jdks.add(JDK.JAVA_17);
+        jdks.add(JDK.JAVA_21);
+        EXPECTED_METADATA.addPlatform(Platform.LINUX, JDK.JAVA_17, null);
+        EXPECTED_METADATA.addPlatform(Platform.WINDOWS, JDK.JAVA_21, null);
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                            def useContainerAgent = true
+                            def platforms = ["linux", "windows"]
+                            def params = [
+                                platforms: platforms,
+                                jdkVersions: [17, 21],
+                                forkCount: '1C',
+                                useContainerAgent: useContainerAgent,
+                            ]
+                            buildPlugin(params)
+                            """,
+                        spec -> spec.path("Jenkinsfile")),
+                pomXml(POM_XML));
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert other param
+        assertNotNull(pluginMetadata.isUseContainerAgent());
+        assertTrue(pluginMetadata.isUseContainerAgent());
+        assertEquals("1C", pluginMetadata.getForkCount());
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(2, jdkVersion.size());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
+
+    @Test
+    void testJenkinsfileWithConditional() {
+        Set<JDK> jdks = new LinkedHashSet<>();
+        jdks.add(JDK.JAVA_17);
+        jdks.add(JDK.JAVA_21);
+        EXPECTED_METADATA.addPlatform(Platform.LINUX, JDK.JAVA_17, null);
+        EXPECTED_METADATA.addPlatform(Platform.WINDOWS, JDK.JAVA_21, null);
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                    if (JENKINS_URL == 'https://ci.jenkins.io/') {
+                      buildPlugin(
+                        configurations: [
+                          [ platform: "linux", jdk: "21" ],
+                          [ platform: "linux", jdk: "17" ]
+                        ],
+                        useContainerAgent: true,
+                        timeout: 90
+                      )
+                      return
+                    }
+                    node() {
+                      // Not implemented
+                    }
+                    """,
+                        spec -> spec.path("Jenkinsfile")),
+                pomXml(POM_XML));
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert other param
+        assertNotNull(pluginMetadata.isUseContainerAgent());
+        assertTrue(pluginMetadata.isUseContainerAgent());
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(2, jdkVersion.size());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(1, platforms.size());
+        assertTrue(platforms.contains(Platform.LINUX));
     }
 
     @Test
@@ -442,18 +720,23 @@ public class FetchMetadataTest implements RewriteTest {
         Set<JDK> jdks = new LinkedHashSet<>();
         jdks.add(JDK.JAVA_11);
         jdks.add(JDK.JAVA_17);
-        EXPECTED_POM_METADATA.setJdks(jdks);
+        EXPECTED_METADATA.addPlatform(Platform.LINUX, JDK.JAVA_11, null);
+        EXPECTED_METADATA.addPlatform(Platform.WINDOWS, JDK.JAVA_17, null);
         rewriteRun(
                 recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
                 // language=groovy
                 groovy(
                         """
+                            def forkCount = '1C'
+                            def useContainerAgent = true
                             def configurations = [
                               [ platform: "linux", jdk: "11" ],
                               [ platform: "windows", jdk: "17" ]
                             ]
 
                             buildPlugin(
+                                forkCount: forkCount,
+                                useContainerAgent: useContainerAgent,
                                 failFast: false,
                                 configurations: configurations,
                                 checkstyle: [qualityGates: [[threshold: 1, type: 'NEW', unstable: true]]],
@@ -464,7 +747,19 @@ public class FetchMetadataTest implements RewriteTest {
                 pomXml(POM_XML));
         PluginMetadata pluginMetadata = new PluginMetadata().refresh();
         assertTrue(pluginMetadata.hasFile(ArchetypeCommonFile.JENKINSFILE));
+
+        // Assert JDK
         Set<JDK> jdkVersion = pluginMetadata.getJdks();
         assertEquals(2, jdkVersion.size());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+
+        assertNotNull(pluginMetadata.isUseContainerAgent());
+        assertTrue(pluginMetadata.isUseContainerAgent());
+        assertEquals("1C", pluginMetadata.getForkCount());
     }
 }

@@ -20,14 +20,22 @@ import java.util.stream.StreamSupport;
 import org.apache.sshd.client.SshClient;
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider;
 import org.apache.sshd.git.transport.GitSshdSessionFactory;
+import org.eclipse.jgit.api.CommitCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
 import org.eclipse.jgit.errors.UnsupportedCredentialItem;
+import org.eclipse.jgit.internal.signing.ssh.SshSigner;
 import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.transport.*;
+import org.eclipse.jgit.transport.CredentialItem;
+import org.eclipse.jgit.transport.CredentialsProvider;
+import org.eclipse.jgit.transport.PushResult;
+import org.eclipse.jgit.transport.RefSpec;
+import org.eclipse.jgit.transport.SshSessionFactory;
+import org.eclipse.jgit.transport.URIish;
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider;
 import org.kohsuke.github.GHApp;
 import org.kohsuke.github.GHAppInstallationToken;
 import org.kohsuke.github.GHBranchSync;
@@ -670,7 +678,9 @@ public class GHService {
             String commitMessage = TemplateUtils.renderCommitMessage(plugin, config.getRecipe());
             LOG.debug("Commit message: {}", commitMessage);
             Status status = git.status().call();
-            if (status.hasUncommittedChanges()) {
+            LOG.debug("Untracked before commit: {}", status.getUntracked());
+            LOG.debug("Untracked folder commit: {}", status.getUntrackedFolders());
+            if (status.hasUncommittedChanges() || !status.getUntracked().isEmpty()) {
                 LOG.debug("Changed files before commit: {}", status.getChanged());
                 LOG.debug("Untracked before commit: {}", status.getUntracked());
                 LOG.debug("Missing before commit {}", status.getMissing());
@@ -686,11 +696,10 @@ public class GHService {
                 LOG.debug("Removed files to after staging: {}", status.getRemoved());
                 GHUser user = getCurrentUser();
                 String email = getPrimaryEmail(user);
-                git.commit()
+                CommitCommand commit = git.commit()
                         .setAuthor(user.getName() != null ? user.getName() : String.valueOf(user.getId()), email)
-                        .setMessage(commitMessage)
-                        .setSign(false) // Maybe a new option to sign commit?
-                        .call();
+                        .setMessage(commitMessage);
+                signCommit(commit).call();
                 LOG.debug("Changes committed for plugin {}", plugin.getName());
                 plugin.withCommits();
             } else {
@@ -699,6 +708,25 @@ public class GHService {
         } catch (IOException | IllegalArgumentException | GitAPIException e) {
             plugin.addError("Failed to commit changes", e);
             plugin.raiseLastError();
+        }
+    }
+
+    /**
+     * Sign the commit using SSH key. Set not sign if using GH_TOKEN
+     * @param commit The commit command to sign
+     * @return The signed commit command
+     * @throws IOException If the SSH key reading failed
+     */
+    private CommitCommand signCommit(CommitCommand commit) throws IOException {
+        if (sshKeyAuth) {
+            LOG.debug("Signing commit using SSH key");
+            commit.setSign(true);
+            commit.setSigner(new SshSigner());
+            commit.setSigningKey(config.getSshPrivateKey().toAbsolutePath().toString());
+            return commit;
+        } else {
+            LOG.warn("Can only sign commit using SSH key. Skipping sign commit when using GH_TOKEN");
+            return commit;
         }
     }
 
