@@ -90,9 +90,10 @@ public class PomModifier {
     public String getPackaging() {
         XPath xPath = XPathFactory.newInstance().newXPath();
         try {
-            return xPath.compile("/project/packaging").evaluate(document);
+            String packaging = xPath.compile("/project/packaging").evaluate(document);
+            return packaging.isEmpty() ? null : packaging;
         } catch (Exception e) {
-            LOG.warn("Error getting packaging: {}", e.getMessage());
+            LOG.warn("Error getting packaging from {}: {}", pomFilePath, e.getMessage());
             return null;
         }
     }
