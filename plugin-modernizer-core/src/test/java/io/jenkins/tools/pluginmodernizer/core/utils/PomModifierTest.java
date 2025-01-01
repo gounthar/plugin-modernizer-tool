@@ -12,7 +12,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.logging.Logger;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
@@ -194,6 +193,8 @@ public class PomModifierTest {
         // Verify that the original XML formatting is preserved except for the added relativePath
         String originalContent = new String(Files.readAllBytes(Paths.get(TEST_POM_PATH)));
         String modifiedContent = new String(Files.readAllBytes(Paths.get(OUTPUT_POM_PATH)));
-        assertTrue(modifiedContent.contains(originalContent.trim().replace("</parent>", "  <relativePath/>\n  </parent>")), "Original XML formatting should be preserved except for the added relativePath");
+        assertTrue(
+                modifiedContent.contains(originalContent.trim().replace("</parent>", "  <relativePath/>\n  </parent>")),
+                "Original XML formatting should be preserved except for the added relativePath");
     }
 }

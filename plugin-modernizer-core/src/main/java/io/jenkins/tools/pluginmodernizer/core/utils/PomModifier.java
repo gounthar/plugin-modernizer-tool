@@ -1,13 +1,16 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.*;
@@ -20,16 +23,12 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
-import java.io.File;
-import java.io.IOException;
-import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /**
  * Utility class for modifying POM files.
@@ -137,14 +136,14 @@ public class PomModifier {
                             Node previousNode = childNodes.item(j);
                             if (previousNode.getNodeType() == Node.COMMENT_NODE
                                     || (previousNode.getNodeType() == Node.TEXT_NODE
-                                    && previousNode
-                                    .getTextContent()
-                                    .trim()
-                                    .startsWith("<!--"))
+                                            && previousNode
+                                                    .getTextContent()
+                                                    .trim()
+                                                    .startsWith("<!--"))
                                     || previousNode
-                                    .getTextContent()
-                                    .replaceAll("\\s+", "")
-                                    .isEmpty()) {
+                                            .getTextContent()
+                                            .replaceAll("\\s+", "")
+                                            .isEmpty()) {
                                 nodesToRemove.add(previousNode);
                                 j--;
                             } else {
@@ -334,10 +333,13 @@ public class PomModifier {
             XMLEventFactory eventFactory = XMLEventFactory.newInstance();
             while (reader.hasNext()) {
                 XMLEvent event = reader.nextEvent();
-                if (event.isStartElement() && event.asStartElement().getName().getLocalPart().equals("parent")) {
+                if (event.isStartElement()
+                        && event.asStartElement().getName().getLocalPart().equals("parent")) {
                     parentTagOpen = true;
                 }
-                if (parentTagOpen && event.isEndElement() && event.asEndElement().getName().getLocalPart().equals("parent")) {
+                if (parentTagOpen
+                        && event.isEndElement()
+                        && event.asEndElement().getName().getLocalPart().equals("parent")) {
                     if (!relativePathAdded) {
                         // Add newline and indentation
                         writer.add(eventFactory.createCharacters("  "));
@@ -356,7 +358,8 @@ public class PomModifier {
             reader.close();
             Files.write(pomFilePath, stringWriter.toString().getBytes(StandardCharsets.UTF_8));
         } catch (XMLStreamException | IOException e) {
-            String errorMessage = String.format("Failed to add relativePath tag to %s: %s", pomFilePath, e.getMessage());
+            String errorMessage =
+                    String.format("Failed to add relativePath tag to %s: %s", pomFilePath, e.getMessage());
             LOG.error(errorMessage, e);
             throw new RuntimeException(errorMessage, e);
         }
