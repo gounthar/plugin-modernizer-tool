@@ -1,19 +1,16 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
-import java.io.File;
-import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.stream.*;
-import javax.xml.stream.events.EndElement;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import javax.xml.transform.OutputKeys;
@@ -23,13 +20,16 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import java.io.File;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Utility class for modifying POM files.
@@ -319,6 +319,9 @@ public class PomModifier {
     public void addRelativePath() {
         try {
             XMLInputFactory inputFactory = XMLInputFactory.newInstance();
+            // Disable external entity processing to prevent XXE attacks
+            inputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+            inputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
             // Preserve CDATA and comments
             inputFactory.setProperty(XMLInputFactory.IS_COALESCING, false);
             inputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, false);
@@ -340,7 +343,6 @@ public class PomModifier {
                         writer.add(eventFactory.createCharacters("  "));
                         StartElement startElement = eventFactory.createStartElement("", "", "relativePath");
                         writer.add(startElement);
-                        // writer.add(eventFactory.createCharacters(""));
                         writer.add(eventFactory.createEndElement("", "", "relativePath"));
                         // Add newline and indentation
                         writer.add(eventFactory.createCharacters("\n  "));
@@ -352,8 +354,8 @@ public class PomModifier {
             }
             writer.close();
             reader.close();
-            Files.write(pomFilePath, stringWriter.toString().getBytes());
-        } catch (Exception e) {
+            Files.write(pomFilePath, stringWriter.toString().getBytes(StandardCharsets.UTF_8));
+        } catch (XMLStreamException | IOException e) {
             String errorMessage = String.format("Failed to add relativePath tag to %s: %s", pomFilePath, e.getMessage());
             LOG.error(errorMessage, e);
             throw new RuntimeException(errorMessage, e);
