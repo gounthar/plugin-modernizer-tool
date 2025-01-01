@@ -107,7 +107,7 @@ public class PomModifier {
         try {
             return xPath.compile("/project/artifactId").evaluate(document);
         } catch (Exception e) {
-            LOG.warn("Error getting artifactId: {}", e.getMessage());
+            LOG.warn("Error getting artifactId from {}: {}", pomFilePath, e.getMessage());
             return null;
         }
     }
@@ -321,6 +321,7 @@ public class PomModifier {
             // Disable external entity processing to prevent XXE attacks
             inputFactory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
             inputFactory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+            inputFactory.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
             // Preserve CDATA and comments
             inputFactory.setProperty(XMLInputFactory.IS_COALESCING, false);
             inputFactory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, false);
