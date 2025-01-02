@@ -461,6 +461,7 @@ public class PomModifier {
                 break;
 
             default:
+                LOG.warn("Encountered unexpected node type: {}", node.getNodeType());
                 break;
         }
     }
