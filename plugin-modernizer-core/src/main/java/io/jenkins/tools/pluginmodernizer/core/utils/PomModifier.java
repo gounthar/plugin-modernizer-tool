@@ -307,7 +307,7 @@ public class PomModifier {
      * any URLs that start with 'http://' with 'https://'. This is useful for ensuring
      * that all repository URLs use a secure connection.
      *
-     * @return false Always returns false, indicating that no specific condition is met.
+     * @return boolean Returns true if at least one URL was changed, false otherwise.
      */
     public boolean replaceHttpWithHttps() {
         boolean changedAtLeastOneUrl = false;
