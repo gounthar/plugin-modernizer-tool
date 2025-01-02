@@ -1,6 +1,7 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +21,7 @@ import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -142,14 +144,14 @@ public class PomModifier {
                             Node previousNode = childNodes.item(j);
                             if (previousNode.getNodeType() == Node.COMMENT_NODE
                                     || (previousNode.getNodeType() == Node.TEXT_NODE
-                                            && previousNode
-                                                    .getTextContent()
-                                                    .trim()
-                                                    .startsWith("<!--"))
+                                    && previousNode
+                                    .getTextContent()
+                                    .trim()
+                                    .startsWith("<!--"))
                                     || previousNode
-                                            .getTextContent()
-                                            .replaceAll("\\s+", "")
-                                            .isEmpty()) {
+                                    .getTextContent()
+                                    .replaceAll("\\s+", "")
+                                    .isEmpty()) {
                                 nodesToRemove.add(previousNode);
                                 j--;
                             } else {
@@ -421,6 +423,10 @@ public class PomModifier {
      * @throws XMLStreamException if an error occurs while writing the XML
      */
     private void writeNode(Node node, XMLEventWriter writer, XMLEventFactory eventFactory) throws XMLStreamException {
+        if (node == null) {
+            LOG.warn("Attempted to write null node");
+            return;
+        }
         switch (node.getNodeType()) {
             case Node.ELEMENT_NODE:
                 Element element = (Element) node;
