@@ -37,6 +37,7 @@ public class PomModifier {
     private Document document;
     private final Path pomFilePath;
     private DocumentBuilderFactory dbFactory = null;
+    private final XPath xPath = XPathFactory.newInstance().newXPath();
 
     /**
      * Constructor for PomModifier.
@@ -90,7 +91,6 @@ public class PomModifier {
             LOG.warn("Document is null for {}", pomFilePath);
             return null;
         }
-        XPath xPath = XPathFactory.newInstance().newXPath();
         try {
             String packaging = xPath.compile("/project/packaging").evaluate(document);
             return packaging.isEmpty() ? null : packaging;
@@ -110,7 +110,6 @@ public class PomModifier {
             LOG.warn("Document is null for {}", pomFilePath);
             return null;
         }
-        XPath xPath = XPathFactory.newInstance().newXPath();
         try {
             return xPath.compile("/project/artifactId").evaluate(document);
         } catch (Exception e) {
