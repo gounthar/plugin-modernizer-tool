@@ -1,6 +1,7 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -13,14 +14,10 @@ import java.util.ArrayList;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.*;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathFactory;
 import org.slf4j.Logger;
@@ -29,6 +26,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /**
  * Utility class for modifying POM files.
@@ -36,8 +34,9 @@ import org.w3c.dom.NodeList;
 public class PomModifier {
 
     private static final Logger LOG = LoggerFactory.getLogger(PomModifier.class);
-    private final Document document;
+    private Document document;
     private final Path pomFilePath;
+    private DocumentBuilderFactory dbFactory = null;
 
     /**
      * Constructor for PomModifier.
@@ -57,7 +56,7 @@ public class PomModifier {
             }
 
             File pomFile = this.pomFilePath.toFile();
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            dbFactory = DocumentBuilderFactory.newInstance();
             dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             dbFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
             dbFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
@@ -365,12 +364,27 @@ public class PomModifier {
             }
             writer.close();
             reader.close();
+
+            // Secure DocumentBuilderFactory configuration
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            dbFactory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            dbFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            dbFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            dbFactory.setXIncludeAware(false);
+            dbFactory.setExpandEntityReferences(false);
+
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            document = dBuilder.parse(
+                    new ByteArrayInputStream(stringWriter.toString().getBytes(StandardCharsets.UTF_8)));
             Files.write(pomFilePath, stringWriter.toString().getBytes(StandardCharsets.UTF_8));
-        } catch (XMLStreamException | IOException e) {
+        } catch (XMLStreamException | IOException | ParserConfigurationException e) {
             String errorMessage =
                     String.format("Failed to add relativePath tag to %s: %s", pomFilePath, e.getMessage());
             LOG.error(errorMessage, e);
             throw new RuntimeException(errorMessage, e);
+        } catch (SAXException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -383,21 +397,61 @@ public class PomModifier {
     @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public void savePom(String outputPath) {
         try {
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            transformerFactory.setFeature("http://javax.xml.XMLConstants/feature/secure-processing", true);
-            transformerFactory.setAttribute("indent-number", 2);
-            Transformer transformer = transformerFactory.newTransformer();
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
-            DOMSource source = new DOMSource(document);
-            StreamResult result = new StreamResult(new File(outputPath));
-            transformer.transform(source, result);
-        } catch (InvalidPathException e) {
-            LOG.error("Invalid output path: " + e.getMessage());
-            throw new IllegalArgumentException("Invalid output path: " + outputPath, e);
-        } catch (Exception e) {
+            XMLOutputFactory outputFactory = XMLOutputFactory.newInstance();
+            XMLEventWriter writer = outputFactory.createXMLEventWriter(
+                    Files.newOutputStream(Paths.get(outputPath)), StandardCharsets.UTF_8.name());
+            XMLEventFactory eventFactory = XMLEventFactory.newInstance();
+
+            writer.add(eventFactory.createStartDocument(StandardCharsets.UTF_8.name(), "1.0"));
+            writeNode(document.getDocumentElement(), writer, eventFactory);
+            writer.add(eventFactory.createEndDocument());
+
+            writer.close();
+        } catch (XMLStreamException | IOException e) {
             LOG.error("Error saving POM file: " + e.getMessage(), e);
             throw new RuntimeException("Failed to save POM file", e);
+        }
+    }
+
+    /**
+     * Writes a DOM Node and its children to an XMLEventWriter.
+     *
+     * @param node         the DOM Node to write
+     * @param writer       the XMLEventWriter to write to
+     * @param eventFactory the XMLEventFactory to create XML events
+     * @throws XMLStreamException if an error occurs while writing the XML
+     */
+    private void writeNode(Node node, XMLEventWriter writer, XMLEventFactory eventFactory) throws XMLStreamException {
+        switch (node.getNodeType()) {
+            case Node.ELEMENT_NODE:
+                Element element = (Element) node;
+                writer.add(eventFactory.createStartElement("", "", element.getTagName()));
+
+                // Write attributes
+                for (int i = 0; i < element.getAttributes().getLength(); i++) {
+                    Node attr = element.getAttributes().item(i);
+                    writer.add(eventFactory.createAttribute(attr.getNodeName(), attr.getNodeValue()));
+                }
+
+                // Write child nodes
+                NodeList children = element.getChildNodes();
+                for (int i = 0; i < children.getLength(); i++) {
+                    writeNode(children.item(i), writer, eventFactory);
+                }
+
+                writer.add(eventFactory.createEndElement("", "", element.getTagName()));
+                break;
+
+            case Node.TEXT_NODE:
+                writer.add(eventFactory.createCharacters(node.getNodeValue()));
+                break;
+
+            case Node.COMMENT_NODE:
+                writer.add(eventFactory.createComment(node.getNodeValue()));
+                break;
+
+            default:
+                break;
         }
     }
 }

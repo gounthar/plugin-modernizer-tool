@@ -178,7 +178,7 @@ public class PomModifierTest {
     public void testAddRelativePath() throws Exception {
         PomModifier pomModifier = new PomModifier(OUTPUT_POM_PATH);
         pomModifier.addRelativePath();
-        // pomModifier.savePom(OUTPUT_POM_PATH);
+        pomModifier.savePom(OUTPUT_POM_PATH);
 
         DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
