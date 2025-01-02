@@ -1,7 +1,6 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -22,7 +21,6 @@ import javax.xml.stream.events.XMLEvent;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -99,7 +97,7 @@ public class PomModifier {
             return null;
         }
         try {
-            String packaging = xPath.compile("/project/packaging").evaluate(document);
+            String packaging = packageXPath.evaluate(document);
             return packaging.isEmpty() ? null : packaging;
         } catch (Exception e) {
             LOG.warn("Error getting packaging from {}: {}", pomFilePath, e.getMessage());
@@ -118,7 +116,7 @@ public class PomModifier {
             return null;
         }
         try {
-            return xPath.compile("/project/artifactId").evaluate(document);
+            return artifactIdXPath.evaluate(document);
         } catch (Exception e) {
             LOG.warn("Error getting artifactId from {}: {}", pomFilePath, e.getMessage());
             return null;
@@ -149,14 +147,14 @@ public class PomModifier {
                             Node previousNode = childNodes.item(j);
                             if (previousNode.getNodeType() == Node.COMMENT_NODE
                                     || (previousNode.getNodeType() == Node.TEXT_NODE
-                                    && previousNode
-                                    .getTextContent()
-                                    .trim()
-                                    .startsWith("<!--"))
+                                            && previousNode
+                                                    .getTextContent()
+                                                    .trim()
+                                                    .startsWith("<!--"))
                                     || previousNode
-                                    .getTextContent()
-                                    .replaceAll("\\s+", "")
-                                    .isEmpty()) {
+                                            .getTextContent()
+                                            .replaceAll("\\s+", "")
+                                            .isEmpty()) {
                                 nodesToRemove.add(previousNode);
                                 j--;
                             } else {
