@@ -37,7 +37,7 @@ public class PomModifier {
     private static final Logger LOG = LoggerFactory.getLogger(PomModifier.class);
     private Document document;
     private final Path pomFilePath;
-    private DocumentBuilderFactory dbFactory = null;
+    private final DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
     private final XPath xPath = XPathFactory.newInstance().newXPath();
     private final javax.xml.xpath.XPathExpression packageXPath;
     private final javax.xml.xpath.XPathExpression artifactIdXPath;
