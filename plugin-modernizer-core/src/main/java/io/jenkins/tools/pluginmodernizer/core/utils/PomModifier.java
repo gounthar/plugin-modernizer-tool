@@ -122,6 +122,28 @@ public class PomModifier {
         }
     }
 
+    private List<Node> getPrecedingComments(NodeList childNodes, int currentIndex) {
+        List<Node> comments = new ArrayList<>();
+        int j = currentIndex - 1;
+        while (j >= 0) {
+            Node previousNode = childNodes.item(j);
+            if (isCommentOrWhitespace(previousNode)) {
+                comments.add(previousNode);
+                j--;
+            } else {
+                break;
+            }
+        }
+        return comments;
+    }
+
+    private boolean isCommentOrWhitespace(Node node) {
+        return node.getNodeType() == Node.COMMENT_NODE
+                || (node.getNodeType() == Node.TEXT_NODE
+                        && node.getTextContent().trim().startsWith("<!--"))
+                || node.getTextContent().replaceAll("\\s+", "").isEmpty();
+    }
+
     /**
      * Removes offending properties from the POM file.
      */
@@ -141,25 +163,7 @@ public class PomModifier {
                         nodesToRemove.add(node);
 
                         // Add preceding comments to the list
-                        int j = i - 1;
-                        while (j >= 0) {
-                            Node previousNode = childNodes.item(j);
-                            if (previousNode.getNodeType() == Node.COMMENT_NODE
-                                    || (previousNode.getNodeType() == Node.TEXT_NODE
-                                            && previousNode
-                                                    .getTextContent()
-                                                    .trim()
-                                                    .startsWith("<!--"))
-                                    || previousNode
-                                            .getTextContent()
-                                            .replaceAll("\\s+", "")
-                                            .isEmpty()) {
-                                nodesToRemove.add(previousNode);
-                                j--;
-                            } else {
-                                break; // Stop if a non-comment node is encountered
-                            }
-                        }
+                        nodesToRemove.addAll(getPrecedingComments(childNodes, i));
                     }
                 }
             }
