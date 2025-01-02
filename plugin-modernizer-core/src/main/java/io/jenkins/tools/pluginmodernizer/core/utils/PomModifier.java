@@ -1,6 +1,7 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -19,7 +20,9 @@ import javax.xml.stream.*;
 import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -38,6 +41,8 @@ public class PomModifier {
     private final Path pomFilePath;
     private DocumentBuilderFactory dbFactory = null;
     private final XPath xPath = XPathFactory.newInstance().newXPath();
+    private final javax.xml.xpath.XPathExpression packageXPath;
+    private final javax.xml.xpath.XPathExpression artifactIdXPath;
 
     /**
      * Constructor for PomModifier.
@@ -46,7 +51,9 @@ public class PomModifier {
      * @throws IllegalArgumentException if the file path is invalid
      */
     @SuppressFBWarnings("PATH_TRAVERSAL_IN")
-    public PomModifier(String pomFilePath) {
+    public PomModifier(String pomFilePath) throws XPathExpressionException {
+        packageXPath = xPath.compile("/project/packaging");
+        artifactIdXPath = xPath.compile("/project/artifactId");
         try {
             // Validate the file path
             this.pomFilePath = Paths.get(pomFilePath).normalize().toAbsolutePath();
@@ -142,14 +149,14 @@ public class PomModifier {
                             Node previousNode = childNodes.item(j);
                             if (previousNode.getNodeType() == Node.COMMENT_NODE
                                     || (previousNode.getNodeType() == Node.TEXT_NODE
-                                            && previousNode
-                                                    .getTextContent()
-                                                    .trim()
-                                                    .startsWith("<!--"))
+                                    && previousNode
+                                    .getTextContent()
+                                    .trim()
+                                    .startsWith("<!--"))
                                     || previousNode
-                                            .getTextContent()
-                                            .replaceAll("\\s+", "")
-                                            .isEmpty()) {
+                                    .getTextContent()
+                                    .replaceAll("\\s+", "")
+                                    .isEmpty()) {
                                 nodesToRemove.add(previousNode);
                                 j--;
                             } else {
