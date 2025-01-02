@@ -9,12 +9,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
 import org.w3c.dom.Document;
 
 /**
  * Enum to represent the precondition errors preventing any modernization process
  * Generally, these are the errors that need to be fixed before applying any modernization (very old plugin)
- * We can provide in future version a way to fix these errors automatically (without OpenRewrite) by adding a fix function
+ * We can provide in a future version a way to fix these errors automatically (without OpenRewrite) by adding a fix function
  * on this enum
  */
 public enum PreconditionError {
@@ -47,6 +48,8 @@ public enum PreconditionError {
                     if (javaLevel.equals("5") || javaLevel.equals("6") || javaLevel.equals("7")) {
                         return true;
                     }
+                    return false;
+                } catch (XPathExpressionException e) {
                     return false;
                 } catch (Exception e) {
                     return false;
@@ -84,6 +87,8 @@ public enum PreconditionError {
                             document,
                             XPathConstants.NUMBER);
                     return parentVersion != null && !parentVersion.equals(0.0);
+                } catch (XPathExpressionException e) {
+                    return false;
                 } catch (Exception e) {
                     return false;
                 }
