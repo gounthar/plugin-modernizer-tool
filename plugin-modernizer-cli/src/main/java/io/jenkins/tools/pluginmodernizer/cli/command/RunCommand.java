@@ -9,9 +9,14 @@ import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.impl.PluginModernizer;
 import io.jenkins.tools.pluginmodernizer.core.model.ModernizerException;
 import io.jenkins.tools.pluginmodernizer.core.model.Recipe;
+import io.jenkins.tools.pluginmodernizer.core.model.JDK;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 
 /**
  * Run command
@@ -96,6 +101,20 @@ public class RunCommand implements ICommand {
             LOG.error(e.getMessage());
             return 1;
         }
+
+        // Handle shebang lines in Jenkinsfile
+        List<Path> jenkinsfiles = Files.walk(modernizer.getConfig().getPlugins().get(0).getLocalRepository())
+                .filter(path -> path.getFileName().toString().equals("Jenkinsfile"))
+                .toList();
+
+        for (Path jenkinsfile : jenkinsfiles) {
+            List<String> lines = Files.readAllLines(jenkinsfile);
+            if (!lines.isEmpty() && lines.get(0).startsWith("#!")) {
+                LOG.info("Skipping shebang line in Jenkinsfile: {}", jenkinsfile);
+                Files.write(jenkinsfile, lines.subList(1, lines.size()));
+            }
+        }
+
         modernizer.start();
         return 0;
     }
