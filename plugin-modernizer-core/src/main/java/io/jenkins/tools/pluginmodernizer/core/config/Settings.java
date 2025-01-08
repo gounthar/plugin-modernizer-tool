@@ -18,7 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 import org.apache.maven.artifact.versioning.ComparableVersion;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -214,7 +213,7 @@ public class Settings {
         return new URL("https://%s".formatted(host));
     }
 
-    private static @NotNull String getRemediationPluginParentVersion() {
+    private static String getRemediationPluginParentVersion() {
         return readProperty("remediation.jenkins.plugin.parent.version", "versions.properties");
     }
 
