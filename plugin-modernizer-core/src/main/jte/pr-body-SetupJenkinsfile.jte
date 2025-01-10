@@ -21,5 +21,5 @@ The adoption of Java 17 has almost surpassed that of Java 11, and the usage of J
 
 There will come a time when we no longer support plugins built with JDK 8 or 11.
 
-While this PR does not automatically make your plugin compatible with Java 17 or 21, it represents the first step towards a new era. Your plugin will be built and tested within the Jenkins infrastructure using Java 17 and 21.
+While this PR does not automatically make your plugin compatible with Java 17 or 21, it represents the first step towards a new era. Your plugin will be built and tested within the Jenkins infrastructure using the detected JDK versions instead of fixed values like 17 or 21.
 After this PR is merged, we will submit additional automated PRs to enable your plugin to build with Java 17 and 21.

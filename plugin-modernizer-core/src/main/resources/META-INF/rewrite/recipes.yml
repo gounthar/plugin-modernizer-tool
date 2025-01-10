@@ -41,8 +41,8 @@ recipeList:
           forkCount: '1C', // Run a JVM per core in tests
           useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
           configurations: [
-            [platform: 'linux', jdk: 21],
-            [platform: 'windows', jdk: 17],
+            [platform: 'linux', jdk: "${env.LINUX_JDK_VERSION}"],
+            [platform: 'windows', jdk: "${env.WINDOWS_JDK_VERSION}"],
         ])
 ---
 type: specs.openrewrite.org/v1beta/recipe
@@ -520,7 +520,7 @@ recipeList:
   - org.openrewrite.jenkins.IsJenkinsPlugin:
       version: "[2.489,)" # Adapt when LTS
 ---
-type: specs.openrewrite.org/v1beta/recipe
+type: specs.openrewrite.org.v1beta/recipe
 name: io.jenkins.tools.pluginmodernizer.EnsureIndexJelly
 displayName: Create `index.jelly` if it doesn't exist
 description: Jenkins tooling [requires](https://github.com/jenkinsci/maven-hpi-plugin/pull/302) `src/main/resources/index.jelly` exists with a description.
