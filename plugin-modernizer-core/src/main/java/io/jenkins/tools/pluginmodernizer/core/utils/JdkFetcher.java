@@ -69,21 +69,21 @@ public class JdkFetcher {
      * @throws InterruptedException If the operation is interrupted.
      */
     private void downloadAndSetupJdk(int jdkVersion, Path extractionDir) throws IOException, InterruptedException {
-        LOG.info("Downloading the JDK...");
+        LOG.info("Downloading the JDK…");
         Path downloadedFile = downloadJdk(jdkVersion);
-        LOG.info("Download successful");
+        LOG.info("Download successful.");
 
-        LOG.info("Extracting...");
+        LOG.info("Extracting…");
         Files.createDirectories(extractionDir);
         String os = getOSName();
         if (os.contains("windows")) {
             extractZip(downloadedFile, extractionDir);
         } else if (os.contains("linux") || os.contains("mac")) {
             extractTarGz(downloadedFile, extractionDir);
-            LOG.info("Setting executable permissions for files in bin directory");
+            LOG.info("Setting executable permissions for files in bin directory.");
             setJavaBinariesPermissions(extractionDir);
         }
-        LOG.info("Extraction successful");
+        LOG.info("Extraction successful.");
     }
 
     /**
@@ -159,7 +159,7 @@ public class JdkFetcher {
                 }
             }
         } else {
-            LOG.error("Failed to fetch releases. HTTP Status Code: {}", response.statusCode());
+            LOG.error("Failed to fetch releases. HTTP Status Code: {}.", response.statusCode());
         }
         return null;
     }
@@ -316,7 +316,7 @@ public class JdkFetcher {
         Path binDir = jdkPath.resolve("bin");
 
         if (!Files.isDirectory(binDir)) {
-            LOG.error("The bin directory does not exist: {}", binDir);
+            LOG.error("The bin directory does not exist: {}.", binDir);
             return;
         }
 
@@ -332,11 +332,11 @@ public class JdkFetcher {
                 try {
                     Files.setPosixFilePermissions(file, executablePermissions);
                 } catch (IOException e) {
-                    LOG.error("Failed to set executable permissions for {}: {}", file, e.getMessage());
+                    LOG.error("Failed to set executable permissions for {}: {}.", file, e.getMessage());
                 }
             });
         } catch (IOException e) {
-            LOG.error("Failed to list files in directory {}: {}", binDir, e.getMessage());
+            LOG.error("Failed to list files in directory {}: {}.", binDir, e.getMessage());
         }
     }
 }

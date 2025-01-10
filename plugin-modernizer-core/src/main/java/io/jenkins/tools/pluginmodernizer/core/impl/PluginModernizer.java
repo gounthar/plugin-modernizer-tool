@@ -271,7 +271,7 @@ public class PluginModernizer {
 
             // Handle outdated plugin or unparsable Jenkinsfile
             if (plugin.getMetadata().getJdks().stream().allMatch(jdk -> jdk.equals(JDK.getImplicit()))) {
-                LOG.info("Plugin look outdated or without Jenkinsfile.");
+                LOG.info("Plugin looks outdated, or without Jenkinsfile.");
                 StaticPomParser parser = new StaticPomParser(
                         plugin.getLocalRepository().resolve("pom.xml").toString());
                 String jenkinsVersion = parser.getJenkinsVersion();
@@ -281,7 +281,7 @@ public class PluginModernizer {
                 }
                 LOG.debug("Found jenkins version from pom {}", jenkinsVersion);
                 JDK jdk = JDK.get(jenkinsVersion).stream().findFirst().orElse(JDK.min());
-                LOG.info("Plugin support Java {}. Need a first compile to generate classes", jdk.getMajor());
+                LOG.info("Plugin supports Java {}. Need a first compilation to generate classes", jdk.getMajor());
                 plugin.verifyQuickBuild(mavenInvoker, jdk);
                 if (plugin.hasErrors()) {
                     plugin.raiseLastError();
@@ -362,7 +362,7 @@ public class PluginModernizer {
      * @param plugin The plugin
      */
     private void collectMetadata(Plugin plugin, boolean retryAfterFirstCompile) {
-        LOG.trace("Collecting metadata for plugin {}... Please be patient", plugin.getName());
+        LOG.trace("Collecting metadata for plugin {}… Please be patient.", plugin.getName());
         plugin.withJDK(JDK.JAVA_17);
         try {
             plugin.collectMetadata(mavenInvoker);
@@ -373,12 +373,12 @@ public class PluginModernizer {
             if (retryAfterFirstCompile) {
                 plugin.removeErrors();
                 LOG.warn(
-                        "Failed to collect metadata for plugin {}. Will retry after a first compile using lowest JDK",
+                        "Failed to collect metadata for plugin {}. Will retry after a first compile using the lowest JDK.",
                         plugin.getName());
                 plugin.verifyQuickBuild(mavenInvoker, JDK.JAVA_8);
                 if (plugin.hasErrors()) {
                     LOG.debug(
-                            "Plugin {} failed to compile with JDK 8. Skipping metadata collection after retry",
+                            "Plugin {} failed to compile with JDK 8. Skipping metadata collection after retry.",
                             plugin.getName());
                     plugin.raiseLastError();
                 }
@@ -420,11 +420,11 @@ public class PluginModernizer {
         if (metadata.getJdks() == null || metadata.getJdks().isEmpty()) {
             jdk = JDK.JAVA_17;
             LOG.info(
-                    "No JDKs found in metadata for plugin {}. Using same JDK as rewrite for verification",
+                    "No JDKs found in metadata for plugin {}. Using same JDK as rewrite for verification.",
                     plugin.getName());
         } else {
             jdk = JDK.min(metadata.getJdks(), metadata.getJenkinsVersion());
-            LOG.info("Using minimum JDK {} from metadata for plugin {}", jdk.getMajor(), plugin.getName());
+            LOG.info("Using minimum JDK {} from metadata for plugin {}.", jdk.getMajor(), plugin.getName());
         }
         // If the plugin was modernized we should find next JDK compatible
         // For example a Java 8 plugin was modernized to Java 11
@@ -438,7 +438,7 @@ public class PluginModernizer {
         plugin.format(mavenInvoker);
         plugin.verify(mavenInvoker);
         if (plugin.hasErrors()) {
-            LOG.info("Plugin {} failed to verify with JDK {}", plugin.getName(), jdk.getMajor());
+            LOG.info("Plugin {} failed to verify with JDK {}.", plugin.getName(), jdk.getMajor());
             plugin.withoutErrors();
         }
         plugin.withoutErrors();
@@ -458,7 +458,7 @@ public class PluginModernizer {
             // Display error
             if (plugin.hasErrors()) {
                 for (PluginProcessingException error : plugin.getErrors()) {
-                    LOG.error("Error: {}", error.getMessage());
+                    LOG.error("Error: {}.", error.getMessage());
                     if (config.isDebug()) {
                         LOG.error("Stacktrace: ", error);
                     }
@@ -469,20 +469,20 @@ public class PluginModernizer {
             else {
                 if (config.isFetchMetadataOnly()) {
                     LOG.info(
-                            "Metadata was fetched for plugin {} and is available at {}",
+                            "Metadata was fetched for the {} plugin and is available at {}.",
                             plugin.getName(),
                             plugin.getMetadata().getLocation().toAbsolutePath());
                 } else if (config.isDryRun()) {
-                    LOG.info("Dry run mode. Changes were commited on on " + plugin.getLocalRepository()
-                            + " but not pushed");
+                    LOG.info("Dry run mode. Changes were commited on " + plugin.getLocalRepository()
+                            + ", but not pushed.");
                 } else {
                     // Change were made
-                    LOG.info("Pull request was open on "
+                    LOG.info("Pull request was opened on "
                             + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
 
                     // Display changes depending on the recipe
                     if (config.getRecipe().getName().equals("io.jenkins.tools.pluginmodernizer.UpgradeBomVersion")) {
-                        LOG.info("New BOM version: {}", plugin.getMetadata().getBomVersion());
+                        LOG.info("New BOM version: {}.", plugin.getMetadata().getBomVersion());
                     }
                 }
             }
