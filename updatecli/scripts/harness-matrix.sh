@@ -51,9 +51,9 @@ echo "$RELEASES" | jq -c '.[]' | while read -r RELEASE; do
   [[ -z "$BODY" ]] && continue
 
   # Search for the Jenkins WAR version in the release notes
-  if echo "$BODY" | grep -q -E "Update dependency org.jenkins-ci.main:jenkins-war to v|Bump org.jenkins-ci.main:jenkins-war to"; then
+  if echo "$BODY" | grep -q -E "Update dependency org.jenkins-ci.main:jenkins-war to v|Bump org.jenkins-ci.main:jenkins-war to|Bump jenkins from"; then
     # Extract the LAST Jenkins WAR version from the message (latest update)
-    JENKINS_WAR_VERSION=$(echo "$BODY" | grep -oP "(Update dependency org.jenkins-ci.main:jenkins-war to v|Bump org.jenkins-ci.main:jenkins-war to v)\K[0-9]+\.[0-9]+(\.[0-9]+)?" | tail -n 1)
+    JENKINS_WAR_VERSION=$(echo "$BODY" | grep -oP "(Update dependency org.jenkins-ci.main:jenkins-war to v|Bump org.jenkins-ci.main:jenkins-war to v|Bump jenkins from [0-9]+\.[0-9]+ to )\K[0-9]+\.[0-9]+(\.[0-9]+)?" | tail -n 1)
 
     # Validate WAR version format
     if [[ $JENKINS_WAR_VERSION =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
