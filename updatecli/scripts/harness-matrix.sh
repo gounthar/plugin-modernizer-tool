@@ -75,9 +75,9 @@ done < "$TEMP_FILE"
 # Clean up the temporary file
 rm "$TEMP_FILE"
 
-# Sort versions and build table
+# Sort versions by Jenkins WAR version (ascending order)
 if [ "${#VERSION_MAP[@]}" -gt 0 ]; then
-  for TAG_NAME in $(echo "${!VERSION_MAP[@]}" | tr ' ' '\n' | sort -V); do
+  for TAG_NAME in $(for key in "${!VERSION_MAP[@]}"; do echo "$key ${VERSION_MAP[$key]}"; done | sort -k2,2V | cut -d' ' -f1); do
     TABLE+="\n| $TAG_NAME | ${VERSION_MAP[$TAG_NAME]} |"
   done
 fi
@@ -86,6 +86,6 @@ fi
 if [ "${#VERSION_MAP[@]}" -eq 0 ]; then
   echo "No compatibility information found in any releases."
 else
-  echo -e "\nCompatibility Table:"
+  echo -e "\nCompatibility Table (sorted by Jenkins WAR version):"
   echo -e "$TABLE"
 fi
