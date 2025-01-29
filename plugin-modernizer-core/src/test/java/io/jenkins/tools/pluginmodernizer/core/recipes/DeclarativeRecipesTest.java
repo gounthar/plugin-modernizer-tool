@@ -46,6 +46,55 @@ public class DeclarativeRecipesTest implements RewriteTest {
             </div>
             """;
 
+    @Language("groovy")
+    private static final String EXPECTED_MODERN_JENKINSFILE =
+            """
+            /*
+            See the documentation for more options:
+            https://github.com/jenkins-infra/pipeline-library/
+            */
+            buildPlugin(
+                forkCount: '1C', // Run a JVM per core in tests
+                useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
+                configurations: [
+                    [platform: 'linux', jdk: 21],
+                    [platform: 'windows', jdk: 17]
+                ]
+            )""";
+
+    @Language("groovy")
+    // For example 2.401 was not supporting yet officially Java 21
+    private static final String NO_JAVA_21_SUPPORT_JENKINSFILE =
+            """
+            /*
+            See the documentation for more options:
+            https://github.com/jenkins-infra/pipeline-library/
+            */
+            buildPlugin(
+                forkCount: '1C', // Run a JVM per core in tests
+                useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
+                configurations: [
+                    [platform: 'linux', jdk: 17],
+                    [platform: 'windows', jdk: 11]
+                ]
+            )""";
+
+    @Language("groovy")
+    private static final String JAVA_8_JENKINS_FILE =
+            """
+            /*
+            See the documentation for more options:
+            https://github.com/jenkins-infra/pipeline-library/
+            */
+            buildPlugin(
+                forkCount: '1C', // Run a JVM per core in tests
+                useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
+                configurations: [
+                    [platform: 'linux', jdk: 11],
+                    [platform: 'windows', jdk: 8]
+                ]
+            )""";
+
     /**
      * LOGGER.
      */
@@ -321,6 +370,101 @@ public class DeclarativeRecipesTest implements RewriteTest {
     }
 
     @Test
+    void testUpgradeOldBomVersionFormat() {
+        rewriteRun(
+                spec -> spec.recipeFromResource(
+                        "/META-INF/rewrite/recipes.yml", "io.jenkins.tools.pluginmodernizer.UpgradeBomVersion"),
+                // language=xml
+                pomXml(
+                        """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                          <modelVersion>4.0.0</modelVersion>
+                          <parent>
+                            <groupId>org.jenkins-ci.plugins</groupId>
+                            <artifactId>plugin</artifactId>
+                            <version>4.0</version>
+                            <relativePath />
+                          </parent>
+                          <groupId>io.jenkins.plugins</groupId>
+                          <artifactId>empty</artifactId>
+                          <version>1.0.0-SNAPSHOT</version>
+                          <packaging>hpi</packaging>
+                          <name>Empty Plugin</name>
+                          <properties>
+                             <jenkins.version>2.164.3</jenkins.version>
+                          </properties>
+                          <dependencyManagement>
+                            <dependencies>
+                              <dependency>
+                                <groupId>io.jenkins.tools.bom</groupId>
+                                <artifactId>bom-2.164.x</artifactId>
+                                <version>3</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                              </dependency>
+                            </dependencies>
+                          </dependencyManagement>
+                          <repositories>
+                            <repository>
+                              <id>repo.jenkins-ci.org</id>
+                              <url>https://repo.jenkins-ci.org/public/</url>
+                            </repository>
+                          </repositories>
+                          <pluginRepositories>
+                            <pluginRepository>
+                              <id>repo.jenkins-ci.org</id>
+                              <url>https://repo.jenkins-ci.org/public/</url>
+                            </pluginRepository>
+                          </pluginRepositories>
+                        </project>
+                        """,
+                        """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                          <modelVersion>4.0.0</modelVersion>
+                          <parent>
+                            <groupId>org.jenkins-ci.plugins</groupId>
+                            <artifactId>plugin</artifactId>
+                            <version>4.0</version>
+                            <relativePath />
+                          </parent>
+                          <groupId>io.jenkins.plugins</groupId>
+                          <artifactId>empty</artifactId>
+                          <version>1.0.0-SNAPSHOT</version>
+                          <packaging>hpi</packaging>
+                          <name>Empty Plugin</name>
+                          <properties>
+                             <jenkins.version>2.164.3</jenkins.version>
+                          </properties>
+                          <dependencyManagement>
+                            <dependencies>
+                              <dependency>
+                                <groupId>io.jenkins.tools.bom</groupId>
+                                <artifactId>bom-2.164.x</artifactId>
+                                <version>10</version>
+                                <type>pom</type>
+                                <scope>import</scope>
+                              </dependency>
+                            </dependencies>
+                          </dependencyManagement>
+                          <repositories>
+                            <repository>
+                              <id>repo.jenkins-ci.org</id>
+                              <url>https://repo.jenkins-ci.org/public/</url>
+                            </repository>
+                          </repositories>
+                          <pluginRepositories>
+                            <pluginRepository>
+                              <id>repo.jenkins-ci.org</id>
+                              <url>https://repo.jenkins-ci.org/public/</url>
+                            </pluginRepository>
+                          </pluginRepositories>
+                        </project>
+                        """));
+    }
+
+    @Test
     void testRemoveDependenciesOverride() {
         rewriteRun(
                 spec -> spec.recipeFromResource(
@@ -475,6 +619,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -589,6 +738,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -677,6 +831,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -784,6 +943,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        NO_JAVA_21_SUPPORT_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -924,6 +1088,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -1043,6 +1212,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        JAVA_8_JENKINS_FILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -1158,6 +1332,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -1241,10 +1420,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 import javax.servlet.ServletException;
                                 import org.kohsuke.stapler.Stapler;
                                 import org.kohsuke.stapler.StaplerRequest;
+                                import org.kohsuke.stapler.StaplerResponse;
 
                                 public class Foo {
                                     public void foo() {
                                         StaplerRequest req = Stapler.getCurrentRequest();
+                                        StaplerResponse response = Stapler.getCurrentResponse();
                                     }
                                 }
                                 """,
@@ -1252,10 +1433,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 import jakarta.servlet.ServletException;
                                 import org.kohsuke.stapler.Stapler;
                                 import org.kohsuke.stapler.StaplerRequest2;
+                                import org.kohsuke.stapler.StaplerResponse2;
 
                                 public class Foo {
                                     public void foo() {
                                         StaplerRequest2 req = Stapler.getCurrentRequest2();
+                                        StaplerResponse2 response = Stapler.getCurrentResponse2();
                                     }
                                 }
                                 """)));
@@ -1272,6 +1455,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -1380,6 +1568,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         null,
                         EXPECTED_JELLY,
                         s -> s.path(ArchetypeCommonFile.INDEX_JELLY.getPath().getFileName()))),
+                // language=groovy
+                groovy(
+                        null,
+                        EXPECTED_MODERN_JENKINSFILE,
+                        s -> s.path(ArchetypeCommonFile.JENKINSFILE.getPath().getFileName())),
                 // language=xml
                 pomXml(
                         """
@@ -2034,7 +2227,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                     <dependency>
                       <groupId>io.jenkins.plugins</groupId>
                       <artifactId>commons-compress-api</artifactId>
-                      <version>1.27.1-1</version>
+                      <version>%s</version>
                     </dependency>
                   </dependencies>
                   <repositories>
@@ -2050,7 +2243,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                     </pluginRepository>
                   </pluginRepositories>
                 </project>
-                """));
+                """
+                                .formatted(Settings.getPluginVersion("commons-compress-api"))));
     }
 
     @Test
@@ -2311,15 +2505,21 @@ public class DeclarativeRecipesTest implements RewriteTest {
         rewriteRun(
                 spec -> spec.recipeFromResource(
                         "/META-INF/rewrite/recipes.yml", "io.jenkins.tools.pluginmodernizer.SetupJenkinsfile"),
+                // language=xml
                 pomXml(
                         """
                   <?xml version="1.0" encoding="UTF-8"?>
                   <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                            xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
                       <modelVersion>4.0.0</modelVersion>
-                      <groupId>org.jenkins-ci.plugins</groupId>
+                      <parent>
+                        <groupId>org.jenkins-ci.plugins</groupId>
+                        <artifactId>plugin</artifactId>
+                        <version>4.87</version>
+                        <relativePath />
+                      </parent>
                       <artifactId>plugin</artifactId>
-                      <version>4.75</version>
+                      <version>0.0.1-SNAPSHOT</version>
                       <packaging>hpi</packaging>
                       <name>Test Plugin</name>
                       <properties>

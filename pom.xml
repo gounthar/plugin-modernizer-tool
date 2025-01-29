@@ -60,7 +60,7 @@
     <maven.version>3.9.9</maven.version>
     <jacoco-maven-plugin.version>0.8.12</jacoco-maven-plugin.version>
     <jgit.version>7.1.0.202411261347-r</jgit.version>
-    <github-api.version>1.326</github-api.version>
+    <github-api.version>2.0-alpha-3</github-api.version>
     <commons-compress.version>1.27.1</commons-compress.version>
     <guava.version>33.4.0-jre</guava.version>
     <byte-buddy.version>1.16.1</byte-buddy.version>
@@ -349,6 +349,27 @@
   <build>
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <executions>
+            <execution>
+              <id>enforce-versions</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <phase>validate</phase>
+              <configuration>
+                <rules>
+                  <requireJavaVersion>
+                    <version>17,21</version>
+                    <message>Project requires Java 17 or Java 21</message>
+                  </requireJavaVersion>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-surefire-plugin</artifactId>

@@ -30,7 +30,7 @@ import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.InvocationResult;
 import org.apache.maven.shared.invoker.Invoker;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
-import org.junit.jupiter.api.BeforeEach;
+import org.eclipse.jgit.api.Git;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -121,15 +121,20 @@ public class CommandLineITCase {
     @TempDir
     private Path keysPath;
 
-    @BeforeEach
-    public void beforeEach() throws Exception {
+    public CommandLineITCase() {
+        // Ensure logs folder is created
         if (!Files.isDirectory(logFolder)) {
-            Files.createDirectory(logFolder);
+            try {
+                Files.createDirectory(logFolder);
+            } catch (Exception e) {
+                LOG.error("Error creating logs folder", e);
+            }
         }
     }
 
     @Test
     @Tag("Always")
+    @Execution(ExecutionMode.CONCURRENT)
     public void testVersion() throws Exception {
         Path logFile = setupLogs("testVersion");
         Invoker invoker = buildInvoker();
@@ -153,6 +158,7 @@ public class CommandLineITCase {
 
     @Test
     @Tag("Always")
+    @Execution(ExecutionMode.CONCURRENT)
     public void testHelp() throws Exception {
         Path logFile = setupLogs("testHelp");
         Invoker invoker = buildInvoker();
@@ -167,6 +173,7 @@ public class CommandLineITCase {
 
     @Test
     @Tag("Slow")
+    @Execution(ExecutionMode.CONCURRENT)
     public void testCleanupWithDryRun() throws Exception {
         Path logFile = setupLogs("testCleanupWithDryRun");
         Invoker invoker = buildInvoker();
@@ -193,6 +200,7 @@ public class CommandLineITCase {
 
     @Test
     @Tag("Slow")
+    @Execution(ExecutionMode.CONCURRENT)
     public void testValidateWithSshKey(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
 
         Path logFile = setupLogs("testValidateWithSshKey");
@@ -222,6 +230,7 @@ public class CommandLineITCase {
 
     @Test
     @Tag("Slow")
+    @Execution(ExecutionMode.CONCURRENT)
     public void testValidate(WireMockRuntimeInfo wmRuntimeInfo) throws Exception {
 
         Path logFile = setupLogs("testValidate");
@@ -246,6 +255,7 @@ public class CommandLineITCase {
 
     @Test
     @Tag("Slow")
+    @Execution(ExecutionMode.CONCURRENT)
     public void testListRecipes() throws Exception {
         Path logFile = setupLogs("testListRecipes");
         Invoker invoker = buildInvoker();
@@ -274,8 +284,7 @@ public class CommandLineITCase {
         String plugin = expectedMetadata.getPluginName();
 
         // Junit attachment with logs file for the plugin build
-        System.out.printf(
-                "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+        System.out.printf("[[ATTACHMENT|%s]]%n", getMavenInvokerLog(plugin));
         System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
 
         try (GitHubServerContainer gitRemote = new GitHubServerContainer(wmRuntimeInfo, keysPath, plugin, "main")) {
@@ -329,8 +338,7 @@ public class CommandLineITCase {
         final String recipe = "ReplaceLibrariesWithApiPlugin";
 
         // Junit attachment with logs file for the plugin build
-        System.out.printf(
-                "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+        System.out.printf("[[ATTACHMENT|%s]]%n", getMavenInvokerLog(plugin));
         System.out.printf("[[ATTACHMENT|%s]]%n", logFile1.toAbsolutePath());
         System.out.printf("[[ATTACHMENT|%s]]%n", logFile2.toAbsolutePath());
 
@@ -347,8 +355,12 @@ public class CommandLineITCase {
             // Assert output
             assertAll(
                     () -> assertEquals(0, result.getExitCode()),
+                    () -> assertTrue(
+                            Files.readAllLines(logFile1).stream()
+                                    .anyMatch(line -> line.matches("(.*)Modified file: pom.xml(.*)")),
+                            "pom.xml not modified"),
                     () -> assertTrue(Files.readAllLines(logFile1).stream()
-                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were commited on (.*)"))));
+                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were made on (.*)"))));
 
             // Delete target folder to use data from cache
             File targetDirectory = cachePath
@@ -373,7 +385,7 @@ public class CommandLineITCase {
             assertAll(
                     () -> assertEquals(0, result2.getExitCode()),
                     () -> assertTrue(Files.readAllLines(logFile2).stream()
-                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were commited on (.*)"))));
+                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were made on (.*)"))));
         }
     }
 
@@ -387,8 +399,7 @@ public class CommandLineITCase {
         final String recipe = "SetupDependabot";
 
         // Junit attachment with logs file for the plugin build
-        System.out.printf(
-                "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+        System.out.printf("[[ATTACHMENT|%s]]%n", getMavenInvokerLog(plugin));
         System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
 
         try (GitHubServerContainer gitRemote = new GitHubServerContainer(wmRuntimeInfo, keysPath, plugin, "main")) {
@@ -406,7 +417,38 @@ public class CommandLineITCase {
                     () -> assertTrue(Files.readAllLines(logFile).stream()
                             .anyMatch(line -> line.matches("(.*)Skipping verification (.*)"))),
                     () -> assertTrue(Files.readAllLines(logFile).stream()
+                            .anyMatch(line -> line.matches("(.*)Modified file: .github/dependabot.yml (.*)"))),
+                    () -> assertTrue(Files.readAllLines(logFile).stream()
                             .anyMatch(line -> line.matches("(.*)Pull request was open on (.*)"))));
+
+            // Check that new file was created
+            assertTrue(
+                    Files.exists(cachePath
+                            .resolve("jenkins-plugin-modernizer-cli")
+                            .resolve(plugin)
+                            .resolve("sources")
+                            .resolve(".github")
+                            .resolve("dependabot.yml")),
+                    "Dependabot file was not created");
+
+            // Ensure we reapply the changes when running again
+            InvocationRequest request2 = buildRequest(
+                    "run --recipe %s %s".formatted(recipe, getRunArgs(wmRuntimeInfo, Plugin.build(plugin))), logFile);
+            InvocationResult result2 = invoker.execute(request);
+
+            // Assert output
+            assertAll(
+                    () -> assertEquals(0, result.getExitCode()),
+                    () -> assertTrue(Files.readAllLines(logFile).stream()
+                            .anyMatch(line -> line.matches("(.*)Branch already exists. Checking out the branch(.*)"))),
+                    () -> assertTrue(
+                            Files.readAllLines(logFile).stream()
+                                    .anyMatch(
+                                            line -> line.matches(
+                                                    "(.*)Reseted the branch to plugin-modernizer/setupdependabot Checking out the branch to default branch main(.*)"))),
+                    () -> assertTrue(Files.readAllLines(logFile).stream()
+                            .anyMatch(line -> line.matches(
+                                    "(.*)Metadata already computed for plugin empty. Using cached metadata(.*)"))));
 
             // Check that new file was created
             assertTrue(
@@ -430,8 +472,7 @@ public class CommandLineITCase {
         final String recipe = "SetupDependabot";
 
         // Junit attachment with logs file for the plugin build
-        System.out.printf(
-                "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+        System.out.printf("[[ATTACHMENT|%s]]%n", getMavenInvokerLog(plugin));
         System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
 
         try (GitHubServerContainer gitRemote = new GitHubServerContainer(wmRuntimeInfo, keysPath, plugin, "main")) {
@@ -448,7 +489,9 @@ public class CommandLineITCase {
             assertAll(
                     () -> assertEquals(0, result.getExitCode()),
                     () -> assertTrue(Files.readAllLines(logFile).stream()
-                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were commited on (.*)"))));
+                            .anyMatch(line -> line.matches("(.*)Modified file: .github/dependabot.yml(.*)"))),
+                    () -> assertTrue(Files.readAllLines(logFile).stream()
+                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were made on (.*)"))));
 
             // Check that new file was created
             assertTrue(
@@ -476,6 +519,7 @@ public class CommandLineITCase {
                 .resolve(plugin)
                 .resolve("sources");
         FileUtils.copyDirectory(pluginPath.toFile(), targetPath.toFile());
+        Git.init().setDirectory(targetPath.toFile()).call().close();
 
         final String recipe = "SetupSecurityScan";
 
@@ -484,8 +528,7 @@ public class CommandLineITCase {
             gitRemote.start();
 
             // Junit attachment with logs file for the plugin build
-            System.out.printf(
-                    "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+            System.out.printf("[[ATTACHMENT|%s]]%n", getMavenInvokerLog(plugin));
             System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
 
             Invoker invoker = buildInvoker();
@@ -499,7 +542,10 @@ public class CommandLineITCase {
             assertAll(
                     () -> assertEquals(0, result.getExitCode()),
                     () -> assertTrue(Files.readAllLines(logFile).stream()
-                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were commited on (.*)"))));
+                            .anyMatch(line -> line.matches(
+                                    "(.*)Modified file: .github/workflows/jenkins-security-scan.yml (.*)"))),
+                    () -> assertTrue(Files.readAllLines(logFile).stream()
+                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were made on (.*)"))));
 
             // Check that new file was created
             assertTrue(
@@ -522,6 +568,7 @@ public class CommandLineITCase {
                 .resolve(plugin)
                 .resolve("sources");
         FileUtils.copyDirectory(pluginPath.toFile(), targetPath.toFile());
+        Git.init().setDirectory(targetPath.toFile()).call().close();
 
         final String recipe = "AddCodeOwner";
 
@@ -530,8 +577,7 @@ public class CommandLineITCase {
             gitRemote.start();
 
             // Junit attachment with logs file for the plugin build
-            System.out.printf(
-                    "[[ATTACHMENT|%s]]%n", Plugin.build(plugin).getLogFile().toAbsolutePath());
+            System.out.printf("[[ATTACHMENT|%s]]%n", getMavenInvokerLog(plugin));
             System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
 
             Invoker invoker = buildInvoker();
@@ -543,8 +589,12 @@ public class CommandLineITCase {
             // Assert output
             assertAll(
                     () -> assertEquals(0, result.getExitCode()),
+                    () -> assertTrue(
+                            Files.readAllLines(logFile).stream()
+                                    .anyMatch(line -> line.matches("(.*)Modified file: .github/CODEOWNERS(.*)")),
+                            "Code owner file not modified on logs"),
                     () -> assertTrue(Files.readAllLines(logFile).stream()
-                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were commited on (.*)"))));
+                            .anyMatch(line -> line.matches("(.*)Dry run mode. Changes were made on (.*)"))));
 
             // Check that new file was created
             assertTrue(
@@ -653,6 +703,17 @@ public class CommandLineITCase {
         LOG.debug("Created log file: {}", logFile.toAbsolutePath());
         System.out.printf("[[ATTACHMENT|%s]]%n", logFile.toAbsolutePath());
         return logFile;
+    }
+
+    /**
+     * Get the location of the maven invoker log for the given plugin
+     * @param plugin The plugin
+     * @return the path
+     */
+    private Path getMavenInvokerLog(String plugin) {
+        return cachePath
+                .resolve("jenkins-plugin-modernizer-cli")
+                .resolve(Plugin.build(plugin).getLogFile());
     }
 
     /**

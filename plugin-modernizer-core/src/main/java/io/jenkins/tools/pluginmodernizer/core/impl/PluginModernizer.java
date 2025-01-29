@@ -204,10 +204,8 @@ public class PluginModernizer {
             if (config.isRemoveForks()) {
                 plugin.deleteFork(ghService);
             }
-            plugin.fork(ghService);
-            plugin.sync(ghService);
-            plugin.fetch(ghService);
 
+            plugin.fetch(ghService);
             if (plugin.hasErrors()) {
                 LOG.info("Plugin {} has errors. Will not process this plugin.", plugin.getName());
             }
@@ -350,10 +348,18 @@ public class PluginModernizer {
                 if (!config.isDryRun()) {
                     plugin.clean(mavenInvoker);
                 }
-
                 plugin.commit(ghService);
-                plugin.push(ghService);
-                plugin.openPullRequest(ghService);
+
+                // Only fork/push/PR if we have any changes
+                if (!plugin.getModifiedFiles().isEmpty()) {
+                    plugin.fork(ghService);
+                    plugin.sync(ghService);
+                    plugin.push(ghService);
+                    plugin.openPullRequest(ghService);
+                } else {
+                    LOG.info("No changes were made for plugin {}", plugin.getName());
+                }
+
                 if (config.isRemoveForks()) {
                     plugin.deleteFork(ghService);
                 }
@@ -478,6 +484,7 @@ public class PluginModernizer {
                     LOG.error("Error: {}", error.getMessage());
                     if (config.isDebug()) {
                         LOG.error("Stacktrace: ", error);
+                        break;
                     }
                 }
 
@@ -490,20 +497,29 @@ public class PluginModernizer {
                             plugin.getName(),
                             plugin.getMetadata().getLocation().toAbsolutePath());
                 } else if (config.isDryRun()) {
-                    LOG.info("Dry run mode. Changes were commited on on " + plugin.getLocalRepository()
-                            + " but not pushed");
-                } else {
+                    LOG.info("Dry run mode. Changes were made on " + plugin.getLocalRepository() + " but not commited");
+                    printModifiedFiles(plugin);
+                } else if (plugin.isLocal()) {
+                    LOG.info("Changes were made on " + plugin.getLocalRepository());
+                    printModifiedFiles(plugin);
+                } else if (!plugin.hasErrors()) {
                     // Change were made
                     LOG.info("Pull request was open on "
                             + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
-
-                    // Display changes depending on the recipe
-                    if (config.getRecipe().getName().equals("io.jenkins.tools.pluginmodernizer.UpgradeBomVersion")) {
-                        LOG.info("New BOM version: {}", plugin.getMetadata().getBomVersion());
-                    }
+                    printModifiedFiles(plugin);
                 }
             }
             LOG.info("*************");
+        }
+    }
+
+    private void printModifiedFiles(Plugin plugin) {
+        if (plugin.getModifiedFiles().isEmpty()) {
+            LOG.info("Recipe didn't made any changes");
+            return;
+        }
+        for (String modification : plugin.getModifiedFiles()) {
+            LOG.info("Modified file: {}", modification);
         }
     }
 }
