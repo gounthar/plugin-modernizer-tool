@@ -152,22 +152,8 @@ recipeList:
       minimumVersion: 2.479.1
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsTestHarnessVersion:
       jenkinsVersion: 2.479.1
-  - org.openrewrite.java.ChangeType:
-      oldFullyQualifiedTypeName: org.kohsuke.stapler.StaplerRequest
-      newFullyQualifiedTypeName: org.kohsuke.stapler.StaplerRequest2
-  - org.openrewrite.java.ChangeType:
-      oldFullyQualifiedTypeName: org.kohsuke.stapler.StaplerResponse
-      newFullyQualifiedTypeName: org.kohsuke.stapler.StaplerResponse2
-  - org.openrewrite.java.ChangeMethodName:
-      methodPattern: org.kohsuke.stapler.Stapler getCurrentRequest()
-      newMethodName: getCurrentRequest2
-  - org.openrewrite.java.ChangeMethodName:
-      methodPattern: org.kohsuke.stapler.Stapler getCurrentResponse()
-      newMethodName: getCurrentResponse2
-  - org.openrewrite.java.ChangePackage:
-      oldPackageName: javax.servlet
-      newPackageName: jakarta.servlet
-      recursive: false
+  - io.jenkins.tools.pluginmodernizer.core.recipes.MigrateStaplerAndJavaxToJakarta
+  - io.jenkins.tools.pluginmodernizer.RemoveDevelopersTag
   - io.jenkins.tools.pluginmodernizer.RemoveDependencyVersionOverride
   - io.jenkins.tools.pluginmodernizer.RemoveExtraMavenProperties
   - io.jenkins.tools.pluginmodernizer.MigrateToJenkinsBaseLineProperty
@@ -194,6 +180,16 @@ recipeList:
       onlyIfVersionsMatch: false # Keep newer dependencies
 ---
 type: specs.openrewrite.org/v1beta/recipe
+name: io.jenkins.tools.pluginmodernizer.RemoveDevelopersTag
+displayName: Remove developers tag
+tags: ['chore', 'skip-verification']
+description: Remove developers tag from the pom.xml.
+recipeList:
+  - org.openrewrite.xml.RemoveXmlTag:
+      xPath: /project/developers
+      fileMatcher: '**/pom.xml'
+---
+type: specs.openrewrite.org/v1beta/recipe
 name: io.jenkins.tools.pluginmodernizer.RemoveExtraMavenProperties
 displayName: Remove extra maven properties
 tags: ['chore']
@@ -218,6 +214,7 @@ displayName: Use API plugin instead of direct dependency
 tags: ['developer']
 description: Use API plugins instead of direct dependency.
 recipeList:
+  - io.jenkins.tools.pluginmodernizer.UseJsoupApiPlugin
   - io.jenkins.tools.pluginmodernizer.UseJsonApiPlugin
   - io.jenkins.tools.pluginmodernizer.UseJsonPathApiPlugin
   - io.jenkins.tools.pluginmodernizer.UseGsonApiPlugin
@@ -295,7 +292,7 @@ recipeList:
   - org.openrewrite.jenkins.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: joda-time-api
-      pluginVersion: 2.13.0-93.v9934da_29b_a_e9
+      pluginVersion: 2.13.1-115.va_6b_5f8efb_1d8
       replaces:
         - groupId: joda-time
           artifactId: joda-time
@@ -311,10 +308,26 @@ recipeList:
   - org.openrewrite.jenkins.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: gson-api
-      pluginVersion: 2.11.0-109.v1ef91dd0829a_
+      pluginVersion: 2.12.1-113.v347686d6729f
       replaces:
         - groupId: com.google.code.gson
           artifactId: gson
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.jenkins.tools.pluginmodernizer.UseJsoupApiPlugin
+displayName: Use jsoup API plugin instead of direct dependency
+description: Use jsoup API plugin instead of direct dependency
+tags: ['developer']
+preconditions:
+  - io.jenkins.tools.pluginmodernizer.conditions.IsUsingRecommendCoreVersion
+recipeList:
+  - org.openrewrite.jenkins.ReplaceLibrariesWithApiPlugin:
+      pluginGroupId: org.jenkins-ci.plugins
+      pluginArtifactId: jsoup
+      pluginVersion: 1.18.3-30.v952e9442d416
+      replaces:
+        - groupId: org.jsoup
+          artifactId: jsoup
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.jenkins.tools.pluginmodernizer.UseCompressApiPlugin
@@ -403,9 +416,10 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.UpgradeParentVersion
   - io.jenkins.tools.pluginmodernizer.AddPluginsBom
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsVersion:
-      minimumVersion: 2.462.3
+      minimumVersion: ${jenkins.core.minimum.version}
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsTestHarnessVersion:
-      jenkinsVersion: 2.462.3
+      jenkinsVersion: ${jenkins.core.minimum.version}
+  - io.jenkins.tools.pluginmodernizer.RemoveDevelopersTag
   - io.jenkins.tools.pluginmodernizer.RemoveDependencyVersionOverride
   - io.jenkins.tools.pluginmodernizer.RemoveExtraMavenProperties
   - io.jenkins.tools.pluginmodernizer.UpgradeBomVersion
@@ -427,6 +441,7 @@ recipeList:
       minimumVersion: 2.462.3
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsTestHarnessVersion:
         jenkinsVersion: 2.462.3
+  - io.jenkins.tools.pluginmodernizer.RemoveDevelopersTag
   - io.jenkins.tools.pluginmodernizer.RemoveDependencyVersionOverride
   - io.jenkins.tools.pluginmodernizer.RemoveExtraMavenProperties
   - io.jenkins.tools.pluginmodernizer.UpgradeBomVersion
@@ -456,6 +471,9 @@ recipeList:
       minimumVersion: 2.346.3
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsTestHarnessVersion:
       jenkinsVersion: 2.346.1
+  - io.jenkins.tools.pluginmodernizer.core.recipes.AddDetachedPluginDependency:
+      jenkinsVersion: 2.346.3
+  - io.jenkins.tools.pluginmodernizer.RemoveDevelopersTag
   - io.jenkins.tools.pluginmodernizer.RemoveDependencyVersionOverride
   - io.jenkins.tools.pluginmodernizer.core.recipes.code.ReplaceRemovedSSHLauncherConstructor
   - io.jenkins.tools.pluginmodernizer.RemoveExtraMavenProperties
@@ -501,7 +519,7 @@ description: Check if the plugin is using the recommended core version
 tags: ['condition']
 recipeList:
   - org.openrewrite.jenkins.IsJenkinsPlugin:
-      version: "[2.462.3,)"
+      version: "[${jenkins.core.minimum.version},)"
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.jenkins.tools.pluginmodernizer.conditions.IsUsingCoreVersionWithASMRemoved

@@ -3,6 +3,7 @@ package io.jenkins.tools.pluginmodernizer.core.recipes;
 import static org.openrewrite.groovy.Assertions.groovy;
 import static org.openrewrite.java.Assertions.java;
 import static org.openrewrite.java.Assertions.mavenProject;
+import static org.openrewrite.java.Assertions.srcMainJava;
 import static org.openrewrite.java.Assertions.srcMainResources;
 import static org.openrewrite.java.Assertions.srcTestJava;
 import static org.openrewrite.maven.Assertions.pomXml;
@@ -609,11 +610,54 @@ public class DeclarativeRecipesTest implements RewriteTest {
     }
 
     @Test
+    void removeDevelopersTag() {
+        rewriteRun(
+                spec -> spec.recipeFromResource(
+                        "/META-INF/rewrite/recipes.yml", "io.jenkins.tools.pluginmodernizer.RemoveDevelopersTag"),
+                // language=xml
+                pomXml(
+                        """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                          <modelVersion>4.0.0</modelVersion>
+                          <groupId>io.jenkins.plugins</groupId>
+                          <artifactId>empty</artifactId>
+                          <version>1.0.0-SNAPSHOT</version>
+                          <name>Empty pom</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
+                        </project>
+                        """,
+                        """
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+                          <modelVersion>4.0.0</modelVersion>
+                          <groupId>io.jenkins.plugins</groupId>
+                          <artifactId>empty</artifactId>
+                          <version>1.0.0-SNAPSHOT</version>
+                          <name>Empty pom</name>
+                        </project>
+                        """));
+    }
+
+    @Test
     void upgradeToRecommendCoreVersionTest() {
         rewriteRun(
                 spec -> spec.recipeFromResource(
                         "/META-INF/rewrite/recipes.yml",
                         "io.jenkins.tools.pluginmodernizer.UpgradeToRecommendCoreVersion"),
+                // language=yaml
+                yaml("{}", sourceSpecs -> {
+                    sourceSpecs.path(ArchetypeCommonFile.WORKFLOW_CD.getPath());
+                }),
+                yaml("{}", sourceSpecs -> {
+                    sourceSpecs.path(ArchetypeCommonFile.DEPENDABOT.getPath());
+                }),
                 // language=xml
                 srcMainResources(text(
                         null,
@@ -640,6 +684,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <version>1.0.0-SNAPSHOT</version>
                           <packaging>hpi</packaging>
                           <name>Empty Plugin</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
                           <scm>
                             <connection>scm:git:git://github.com/jenkinsci/empty-plugin.git</connection>
                           </scm>
@@ -681,7 +732,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                             <groupId>org.jenkins-ci.plugins</groupId>
                             <artifactId>plugin</artifactId>
                             <version>4.88</version>
-                            <relativePath />
+                            <relativePath/>
                           </parent>
                           <groupId>io.jenkins.plugins</groupId>
                           <artifactId>empty</artifactId>
@@ -694,8 +745,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <properties>
                             <jenkins-test-harness.version>2225.v04fa_3929c9b_5</jenkins-test-harness.version>
                             <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-                            <jenkins.baseline>2.462</jenkins.baseline>
-                            <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+                            <jenkins.baseline>%s</jenkins.baseline>
+                            <jenkins.version>${jenkins.baseline}.%s</jenkins.version>
                           </properties>
                           <dependencyManagement>
                             <dependencies>
@@ -732,7 +783,10 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           </pluginRepositories>
                         </project>
                         """
-                                .formatted(Settings.getBomVersion())));
+                                .formatted(
+                                        Settings.getJenkinsMinimumBaseline(),
+                                        Settings.getJenkinsMinimumPatchVersion(),
+                                        Settings.getBomVersion())));
     }
 
     @Test
@@ -767,6 +821,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <version>1.0.0-SNAPSHOT</version>
                           <packaging>hpi</packaging>
                           <name>Empty Plugin</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
                           <scm>
                             <connection>scm:git:git://github.com/jenkinsci/empty-plugin.git</connection>
                           </scm>
@@ -810,7 +871,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                             <connection>scm:git:https://github.com/jenkinsci/empty-plugin.git</connection>
                           </scm>
                           <properties>
-                            <jenkins.version>2.462.3</jenkins.version>
+                            <jenkins.version>%s</jenkins.version>
                             <jenkins-test-harness.version>2225.v04fa_3929c9b_5</jenkins-test-harness.version>
                           </properties>
                           <repositories>
@@ -827,7 +888,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           </pluginRepositories>
                         </project>
                         """
-                                .formatted(Settings.getBomVersion())));
+                                .formatted(Settings.getJenkinsMinimumVersion())));
     }
 
     @Test
@@ -862,6 +923,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <version>1.0.0-SNAPSHOT</version>
                           <packaging>hpi</packaging>
                           <name>Empty Plugin</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
                           <properties>
                             <jenkins-test-harness.version>2.41.1</jenkins-test-harness.version>
                             <jenkins.baseline>2.440</jenkins.baseline>
@@ -917,8 +985,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <properties>
                             <jenkins-test-harness.version>2225.v04fa_3929c9b_5</jenkins-test-harness.version>
                             <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-                            <jenkins.baseline>2.462</jenkins.baseline>
-                            <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+                            <jenkins.baseline>%s</jenkins.baseline>
+                            <jenkins.version>${jenkins.baseline}.%s</jenkins.version>
                           </properties>
                           <dependencyManagement>
                             <dependencies>
@@ -951,7 +1019,10 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           </pluginRepositories>
                         </project>
                         """
-                                .formatted(Settings.getBomVersion())));
+                                .formatted(
+                                        Settings.getJenkinsMinimumBaseline(),
+                                        Settings.getJenkinsMinimumPatchVersion(),
+                                        Settings.getBomVersion())));
     }
 
     @Test
@@ -989,6 +1060,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                       <version>${revision}-${changelist}</version>
                       <packaging>hpi</packaging>
                       <name>My API Plugin</name>
+                      <developers>
+                        <developer>
+                          <id>bhacker</id>
+                          <name>Bob Q. Hacker</name>
+                          <email>bhacker@nowhere.net</email>
+                        </developer>
+                      </developers>
                       <properties>
                         <jenkins-test-harness.version>2.41.1</jenkins-test-harness.version>
                         <revision>2.17.0</revision>
@@ -1061,8 +1139,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         <revision>2.17.0</revision>
                         <changelist>999999-SNAPSHOT</changelist>
                         <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-                        <jenkins.baseline>2.462</jenkins.baseline>
-                        <jenkins.version>${jenkins.baseline}.3</jenkins.version>
+                        <jenkins.baseline>%s</jenkins.baseline>
+                        <jenkins.version>${jenkins.baseline}.%s</jenkins.version>
                       </properties>
                       <repositories>
                         <repository>
@@ -1110,7 +1188,10 @@ public class DeclarativeRecipesTest implements RewriteTest {
                       </dependencies>
                     </project>
                     """
-                                .formatted(Settings.getBomVersion())));
+                                .formatted(
+                                        Settings.getJenkinsMinimumBaseline(),
+                                        Settings.getJenkinsMinimumPatchVersion(),
+                                        Settings.getBomVersion())));
     }
 
     @Test
@@ -1145,6 +1226,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <version>1.0.0-SNAPSHOT</version>
                           <packaging>hpi</packaging>
                           <name>Empty Plugin</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
                           <scm>
                             <connection>scm:git:git://github.com/jenkinsci/empty-plugin.git</connection>
                           </scm>
@@ -1285,6 +1373,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <version>1.0.0-SNAPSHOT</version>
                           <packaging>hpi</packaging>
                           <name>Empty Plugin</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
                           <scm>
                             <connection>scm:git:git://github.com/jenkinsci/empty-plugin.git</connection>
                           </scm>
@@ -1360,10 +1455,92 @@ public class DeclarativeRecipesTest implements RewriteTest {
                             </dependencies>
                           </dependencyManagement>
                             <dependencies>
+                            <dependency>
+                              <groupId>io.jenkins.plugins</groupId>
+                              <artifactId>javax-activation-api</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>io.jenkins.plugins</groupId>
+                              <artifactId>javax-mail-api</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>io.jenkins.plugins</groupId>
+                              <artifactId>jaxb</artifactId>
+                            </dependency>
                               <dependency>
                                 <groupId>org.jenkins-ci.main</groupId>
                                 <artifactId>jenkins-test-harness</artifactId>
                               </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.main</groupId>
+                              <artifactId>maven-plugin</artifactId>
+                              <version>RELEASE</version>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.modules</groupId>
+                              <artifactId>sshd</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>ant</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>antisamy-markup-formatter</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>bouncycastle-api</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>command-launcher</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>external-monitor-job</artifactId>
+                              <version>RELEASE</version>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>javadoc</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>jdk-tool</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>junit</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>ldap</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>mailer</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>matrix-auth</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>matrix-project</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>pam-auth</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>subversion</artifactId>
+                            </dependency>
+                            <dependency>
+                              <groupId>org.jenkins-ci.plugins</groupId>
+                              <artifactId>trilead-api</artifactId>
+                            </dependency>
                             </dependencies>
                           <repositories>
                             <repository>
@@ -1378,7 +1555,185 @@ public class DeclarativeRecipesTest implements RewriteTest {
                             </pluginRepository>
                           </pluginRepositories>
                         </project>
-                        """));
+                        """),
+                srcTestJava(
+                        java(
+                                """
+                        package hudson.maven;
+                        public class MavenModuleSet {}
+                        """),
+                        java(
+                                """
+                        package hudson.scm;
+                        public class SubversionSCM {}
+                        """),
+                        java(
+                                """
+                        package hudson.tasks;
+                        public class Ant {}
+                        """),
+                        java(
+                                """
+                        package hudson.tasks;
+                        public class JavadocArchiver {}
+                        """),
+                        java(
+                                """
+                        package hudson.tasks;
+                        public class Mailer {}
+                        """),
+                        java(
+                                """
+                        package hudson.tasks.junit;
+                        public class JUnitResultArchiver {}
+                        """),
+                        java(
+                                """
+                        package hudson.model;
+                        public class ExternalJob {}
+                        """),
+                        java(
+                                """
+                        package hudson.security;
+                        public class LDAPSecurityRealm {}
+                        """),
+                        java(
+                                """
+                        package hudson.security;
+                        public class PAMSecurityRealm {}
+                        """),
+                        java(
+                                """
+                        package hudson.security;
+                        public class GlobalMatrixAuthorizationStrategy {}
+                        """),
+                        java(
+                                """
+                        package hudson.security;
+                        public class ProjectMatrixAuthorizationStrategy {}
+                        """),
+                        java(
+                                """
+                        package hudson.security;
+                        public class AuthorizationMatrixProperty {}
+                        """),
+                        java(
+                                """
+                        package hudson.slaves;
+                        public class CommandLauncher {}
+                        """),
+                        java(
+                                """
+                        package hudson.tools;
+                        public class JDKInstaller {}
+                        """),
+                        java(
+                                """
+                        package javax.xml.bind;
+                        public class JAXBContext {}
+                        """),
+                        java(
+                                """
+                        package com.trilead.ssh2;
+                        public class Connection {}
+                        """),
+                        java(
+                                """
+                        package org.jenkinsci.main.modules.sshd;
+                        public class SSHD {}
+                        """),
+                        java(
+                                """
+                        package javax.activation;
+                        public class DataHandler {}
+                        """),
+                        java(
+                                """
+                        package jenkins.bouncycastle.api;
+                        public class BouncyCastlePlugin {}
+                        """),
+                        java(
+                                """
+                        package jenkins.plugins.javax.activation;
+                        public class CommandMapInitializer {}
+                        """),
+                        java(
+                                """
+                        package jenkins.plugins.javax.activation;
+                        public class FileTypeMapInitializer {}
+                        """),
+                        java(
+                                """
+                        package org.jenkinsci.main.modules.instance_identity;
+                        public class InstanceIdentity {}
+                        """),
+                        java(
+                                """
+                        package hudson.markup;
+                        public class RawHtmlMarkupFormatter {}
+                        """),
+                        java(
+                                """
+                        package hudson.matrix;
+                        public class MatrixProject {}
+                        """)),
+                srcMainJava(
+                        java(
+                                """
+                        import hudson.maven.MavenModuleSet;
+                        import hudson.scm.SubversionSCM;
+                        import hudson.tasks.Ant;
+                        import hudson.tasks.JavadocArchiver;
+                        import hudson.tasks.Mailer;
+                        import hudson.tasks.junit.JUnitResultArchiver;
+                        import hudson.model.ExternalJob;
+                        import hudson.security.LDAPSecurityRealm;
+                        import hudson.security.PAMSecurityRealm;
+                        import hudson.security.GlobalMatrixAuthorizationStrategy;
+                        import hudson.security.ProjectMatrixAuthorizationStrategy;
+                        import hudson.security.AuthorizationMatrixProperty;
+                        import hudson.slaves.CommandLauncher;
+                        import hudson.tools.JDKInstaller;
+                        import javax.xml.bind.JAXBContext;
+                        import com.trilead.ssh2.Connection;
+                        import org.jenkinsci.main.modules.sshd.SSHD;
+                        import javax.activation.DataHandler;
+                        import jenkins.bouncycastle.api.BouncyCastlePlugin;
+                        import jenkins.plugins.javax.activation.CommandMapInitializer;
+                        import jenkins.plugins.javax.activation.FileTypeMapInitializer;
+                        import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
+                        import hudson.markup.RawHtmlMarkupFormatter;
+                        import hudson.matrix.MatrixProject;
+
+                        public class TestDetachedPluginsUsage {
+                            public void execute() {
+                                new MavenModuleSet();
+                                new SubversionSCM();
+                                new Ant();
+                                new JavadocArchiver();
+                                new Mailer();
+                                new JUnitResultArchiver();
+                                new ExternalJob();
+                                new LDAPSecurityRealm();
+                                new PAMSecurityRealm();
+                                new GlobalMatrixAuthorizationStrategy();
+                                new ProjectMatrixAuthorizationStrategy();
+                                new AuthorizationMatrixProperty();
+                                new CommandLauncher();
+                                new JDKInstaller();
+                                new JAXBContext();
+                                new Connection();
+                                new SSHD();
+                                new DataHandler();
+                                new BouncyCastlePlugin();
+                                new CommandMapInitializer();
+                                new FileTypeMapInitializer();
+                                new InstanceIdentity();
+                                new RawHtmlMarkupFormatter();
+                                new MatrixProject();
+                            }
+                        }
+                        """)));
     }
 
     @Test
@@ -1419,6 +1774,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                               <version>1.0.0-SNAPSHOT</version>
                               <packaging>hpi</packaging>
                               <name>Empty Plugin</name>
+                              <developers>
+                                <developer>
+                                  <id>bhacker</id>
+                                  <name>Bob Q. Hacker</name>
+                                  <email>bhacker@nowhere.net</email>
+                                </developer>
+                              </developers>
                               <scm>
                                 <connection>scm:git:https://github.com/jenkinsci/empty-plugin.git</connection>
                               </scm>
@@ -1516,10 +1878,14 @@ public class DeclarativeRecipesTest implements RewriteTest {
     @Test
     void upgradeNextMajorParentVersionTestWithBom() {
         rewriteRun(
-                spec -> spec.recipeFromResource(
-                        "/META-INF/rewrite/recipes.yml",
-                        "io.jenkins.tools.pluginmodernizer.UpgradeNextMajorParentVersion"),
-                // language=xml
+                spec -> {
+                    var parser = JavaParser.fromJavaVersion().logCompilationWarningsAndErrors(true);
+                    collectRewriteTestDependencies().forEach(parser::addClasspathEntry);
+                    spec.recipeFromResource(
+                                    "/META-INF/rewrite/recipes.yml",
+                                    "io.jenkins.tools.pluginmodernizer.UpgradeNextMajorParentVersion")
+                            .parser(parser);
+                }, // language=xml
                 srcMainResources(text(
                         null,
                         EXPECTED_JELLY,
@@ -1546,6 +1912,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <version>1.0.0-SNAPSHOT</version>
                           <packaging>hpi</packaging>
                           <name>Empty Plugin</name>
+                          <developers>
+                            <developer>
+                              <id>bhacker</id>
+                              <name>Bob Q. Hacker</name>
+                              <email>bhacker@nowhere.net</email>
+                            </developer>
+                          </developers>
                           <properties>
                             <jenkins-test-harness.version>2.41.1</jenkins-test-harness.version>
                             <java.version>17</java.version>
@@ -1641,7 +2014,30 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 .formatted(
                                         Settings.getJenkinsParentVersion(),
                                         Settings.getJenkinsTestHarnessVersion(),
-                                        Settings.getBomVersion())));
+                                        Settings.getBomVersion())),
+                srcTestJava(
+                        java(
+                                """
+                        package hudson.util;
+                        public class ChartUtil {}
+                        """)),
+                srcMainResources(
+                        // language=java
+                        java(
+                                """
+                                import javax.servlet.ServletException;
+                                import org.kohsuke.stapler.Stapler;
+                                import org.kohsuke.stapler.StaplerRequest;
+                                import org.kohsuke.stapler.StaplerResponse;
+                                import hudson.util.ChartUtil;
+
+                                public class Foo {
+                                    public void foo() {
+                                        StaplerRequest req = Stapler.getCurrentRequest();
+                                        StaplerResponse response = Stapler.getCurrentResponse();
+                                    }
+                                }
+                                """)));
     }
 
     @Test
@@ -1677,6 +2073,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                   <version>1.0.0-SNAPSHOT</version>
                   <packaging>hpi</packaging>
                   <name>Empty Plugin</name>
+                  <developers>
+                    <developer>
+                      <id>bhacker</id>
+                      <name>Bob Q. Hacker</name>
+                      <email>bhacker@nowhere.net</email>
+                    </developer>
+                  </developers>
                   <properties>
                     <jenkins-test-harness.version>2.41.1</jenkins-test-harness.version>
                     <jenkins.baseline>2.440</jenkins.baseline>
@@ -1993,6 +2396,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
         String jsonPathApiVersion = getApiPluginVersion("json-path-api");
         String gsonApiVersion = getApiPluginVersion("gson-api");
         String jodaTimeApiVersion = getApiPluginVersion("joda-time-api");
+        String jsoupVersion = getApiPluginVersion("jsoup");
         String commonsLang3ApiVersion = getApiPluginVersion("commons-lang3-api");
         String byteBuddyApiVersion = getApiPluginVersion("byte-buddy-api");
         String commonTextApiVersion = getApiPluginVersion("commons-text-api");
@@ -2041,6 +2445,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                       <groupId>org.apache.commons</groupId>
                       <artifactId>commons-compress</artifactId>
                       <version>1.26.1</version>
+                    </dependency>
+                    <dependency>
+                      <groupId>org.jsoup</groupId>
+                      <artifactId>jsoup</artifactId>
+                      <version>1.18.3</version>
                     </dependency>
                     <dependency>
                       <groupId>org.apache.commons</groupId>
@@ -2132,6 +2541,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                       <version>1.26.1</version>
                     </dependency>
                     <dependency>
+                      <groupId>org.jenkins-ci.plugins</groupId>
+                      <artifactId>jsoup</artifactId>
+                      <version>%s</version>
+                    </dependency>
+                    <dependency>
                       <groupId>io.jenkins.plugins</groupId>
                       <artifactId>json-api</artifactId>
                       <version>%s</version>
@@ -2167,6 +2581,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                         commonTextApiVersion,
                                         gsonApiVersion,
                                         jodaTimeApiVersion,
+                                        jsoupVersion,
                                         jsonApiVersion,
                                         jsonPathApiVersion)));
     }

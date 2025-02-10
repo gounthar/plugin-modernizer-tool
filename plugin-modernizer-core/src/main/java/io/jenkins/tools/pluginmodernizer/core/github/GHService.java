@@ -27,6 +27,7 @@ import org.eclipse.jgit.api.ResetCommand;
 import org.eclipse.jgit.api.Status;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.RefAlreadyExistsException;
+import org.eclipse.jgit.api.errors.RefNotFoundException;
 import org.eclipse.jgit.errors.UnsupportedCredentialItem;
 import org.eclipse.jgit.internal.signing.ssh.SshSigner;
 import org.eclipse.jgit.lib.Ref;
@@ -617,9 +618,9 @@ public class GHService {
 
         // Fetch latest changes
         if (Files.isDirectory(plugin.getLocalRepository())) {
+            String defaultBranch = plugin.getRemoteRepository(this).getDefaultBranch();
             // Ensure to set the correct remote, reset changes and pull
             try (Git git = Git.open(plugin.getLocalRepository().toFile())) {
-                String defaultBranch = plugin.getRemoteRepository(this).getDefaultBranch();
                 git.remoteSetUrl()
                         .setRemoteName("origin")
                         .setRemoteUri(remoteUri)
@@ -644,6 +645,13 @@ public class GHService {
                         .setRemoteBranchName(defaultBranch)
                         .call();
                 LOG.info("Fetched repository from {} to branch {}", remoteUri, ref.getName());
+            } catch (RefNotFoundException e) {
+                String message =
+                        "Unable to find branch %s in repository. Probably the default branch was renamed. You can remove the local repository at %s and try again."
+                                .formatted(defaultBranch, plugin.getLocalRepository());
+                LOG.error(message);
+                plugin.addError(message);
+                plugin.raiseLastError();
             } catch (IOException e) {
                 plugin.addError("Failed fetch repository", e);
                 plugin.raiseLastError();
@@ -966,7 +974,7 @@ public class GHService {
     }
 
     /**
-     * Open a pull request for the plugin
+     * Open or update a pull request for the plugin and current recipe
      *
      * @param plugin The plugin to open a pull request for
      */
@@ -1004,7 +1012,18 @@ public class GHService {
         Optional<GHPullRequest> existingPR = checkIfPullRequestExists(plugin);
         if (existingPR.isPresent()) {
             LOG.info("Pull request already exists: {}", existingPR.get().getHtmlUrl());
-            return;
+            GHPullRequest existing = existingPR.get();
+            try {
+                existing.setTitle(prTitle);
+                existing.setBody(prBody);
+                plugin.withPullRequest();
+                LOG.info("Pull request update: {}", existing.getHtmlUrl());
+                deleteLegacyPrs(plugin);
+                return;
+            } catch (Exception e) {
+                plugin.addError("Failed to update pull request", e);
+                plugin.raiseLastError();
+            }
         }
 
         try {
@@ -1018,6 +1037,7 @@ public class GHService {
                     config.isDraft());
             LOG.info("Pull request created: {}", pr.getHtmlUrl());
             plugin.withPullRequest();
+            deleteLegacyPrs(plugin);
             try {
                 String[] tags = plugin.getTags().stream()
                         .filter(ALLOWED_TAGS::contains)
@@ -1096,11 +1116,40 @@ public class GHService {
                     .list()
                     .toList();
             return pullRequests.stream()
+                    .peek(pr -> LOG.debug(
+                            "Checking pull request with ref {}", pr.getHead().getRef()))
                     .filter(pr -> pr.getHead().getRef().equals(branchName))
                     .findFirst();
         } catch (IOException e) {
             plugin.addError("Failed to check if pull request exists", e);
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Delete legacy PR open from the plugin-modernizer-tool branch
+     * @param plugin The plugin to check
+     */
+    private void deleteLegacyPrs(Plugin plugin) {
+        GHRepository repository = plugin.getRemoteRepository(this);
+        try {
+            List<GHPullRequest> pullRequests = repository
+                    .queryPullRequests()
+                    .state(GHIssueState.OPEN)
+                    .list()
+                    .toList();
+            pullRequests.stream()
+                    .filter(pr -> pr.getHead().getRef().equals("plugin-modernizer-tool"))
+                    .forEach(pr -> {
+                        try {
+                            pr.close();
+                            LOG.info("Deleted legacy pull request: {}", pr.getHtmlUrl());
+                        } catch (IOException e) {
+                            LOG.debug("Failed to delete legacy pull request");
+                        }
+                    });
+        } catch (IOException e) {
+            LOG.warn("Failed to check if legacy pull request exists", e);
         }
     }
 
