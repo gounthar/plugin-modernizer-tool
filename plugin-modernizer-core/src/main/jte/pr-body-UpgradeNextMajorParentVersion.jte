@@ -36,6 +36,15 @@ Instead, Jenkins now uses the Repository Permission Updater (RPU) to manage perm
 
 Removing the `developers` tag aligns with modern Jenkins infrastructure standards and prevents outdated or redundant developer information from being included in plugin metadata.
 
+#### The checks aren't checking, why is that?
+
+The issue likely stems from your `Jenkinsfile`, which is still declaring Java 8 or 11.
+The Jenkins infrastructure, in its wisdom, continues to use this, and does not allow the use of a `Jenkinsfile` supplied by a pull request.
+
+To resolve this, a maintainer can replay the failed build by substituting the Jenkinsfile content with our proposed changes using the "replay the build" feature in Jenkins.
+
+Please let us know if you need any assistance with this process.
+
 #### Summary
 
 By upgrading, you'll be positioning your plugin at the forefront of performance, security, and user satisfaction. We encourage you to explore these updates and provide feedback. Let's continue to build a robust Jenkins ecosystem together!
