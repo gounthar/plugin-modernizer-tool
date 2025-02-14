@@ -252,7 +252,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: json-path-api
-      pluginVersion: 2.9.0-138.vc943da_d833b_6
+      pluginVersion: 2.9.0-148.v22a_7ffe323ce
       replaces:
         - groupId: com.jayway.jsonpath
           artifactId: json-path
@@ -375,7 +375,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: byte-buddy-api
-      pluginVersion: 1.17.0-117.v025ccb_c559d7
+      pluginVersion: 1.17.0-125.v1e9b_0e7222d7
       replaces:
         - groupId: net.bytebuddy
           artifactId: byte-buddy
