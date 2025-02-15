@@ -16,7 +16,7 @@
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
         <artifactId>bom-2.479.x</artifactId>
-        <version>4023.va_eeb_b_4e45f07</version>
+        <version>4136.vca_c3202a_7fd1</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -218,7 +218,7 @@
       </resource>
       <resource>
         <targetPath>META-INF/rewrite</targetPath>
-        <filtering>false</filtering>
+        <filtering>true</filtering>
         <directory>src/main/resources/META-INF/rewrite</directory>
         <includes>
           <include>recipes.yml</include>
@@ -248,7 +248,7 @@
                 <artifactItem>
                   <groupId>org.kohsuke.stapler</groupId>
                   <artifactId>stapler</artifactId>
-                  <version>1942.v708e07325402</version>
+                  <version>1948.v0f99403fe86a_</version>
                 </artifactItem>
                 <dependency>
                   <groupId>jakarta.servlet</groupId>
