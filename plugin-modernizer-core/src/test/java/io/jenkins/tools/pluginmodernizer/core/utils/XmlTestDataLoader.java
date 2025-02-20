@@ -3,6 +3,7 @@ package io.jenkins.tools.pluginmodernizer.core.utils;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 public class XmlTestDataLoader {
