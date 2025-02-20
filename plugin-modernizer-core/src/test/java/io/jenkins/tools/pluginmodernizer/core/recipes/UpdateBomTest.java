@@ -45,7 +45,8 @@ public class UpdateBomTest implements RewriteTest {
     @Test
     @Issue("https://github.com/jenkins-infra/plugin-modernizer-tool/issues/534")
     void shouldUpdateToLatestReleasedWithIncrementalsEnabled() throws IOException {
-        String xmlTemplate = XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/incrementals/incrementals-configuration.xml");
+        String xmlTemplate =
+                XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/incrementals/incrementals-configuration.xml");
         Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
         String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
 
@@ -60,7 +61,8 @@ public class UpdateBomTest implements RewriteTest {
 
     @Test
     void shouldUpdateToLatestIncrementalsWithoutMavenConfig() throws IOException {
-        String xmlTemplate = XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/incrementals/incrementals-configuration.xml");
+        String xmlTemplate =
+                XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/incrementals/incrementals-configuration.xml");
         Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
         String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
 
@@ -84,7 +86,8 @@ public class UpdateBomTest implements RewriteTest {
 
     @Test
     void shouldUpgradePropertyForVersion() throws IOException {
-        String xmlTemplate = XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/properties/properties-configuration.xml");
+        String xmlTemplate =
+                XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/properties/properties-configuration.xml");
         Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
         String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
 
