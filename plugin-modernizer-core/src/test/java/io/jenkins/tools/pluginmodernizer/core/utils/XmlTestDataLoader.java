@@ -1,9 +1,9 @@
 package io.jenkins.tools.pluginmodernizer.core.utils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 public class XmlTestDataLoader {
@@ -15,21 +15,35 @@ public class XmlTestDataLoader {
         return Files.readString(Paths.get(filePath), StandardCharsets.UTF_8);
     }
 
-public static String customizeXmlTemplate(String xmlTemplate, Properties properties) {
-    if (xmlTemplate == null) {
-        throw new IllegalArgumentException("XML template cannot be null");
-    }
-    if (properties == null) {
-        throw new IllegalArgumentException("Properties cannot be null");
-    }
-    for (String key : properties.stringPropertyNames()) {
-        String value = properties.getProperty(key);
-        if (value != null) {
-            xmlTemplate = xmlTemplate.replace("${" + key + "}", value);
+    /**
+     * Customizes an XML template by replacing placeholders in the format ${key} with values from properties.
+     *
+     * @param xmlTemplate The XML template containing placeholders
+     * @param properties  The properties containing replacement values
+     * @return The customized XML string
+     * @throws IllegalArgumentException if xmlTemplate or properties is null
+     */
+    public static String customizeXmlTemplate(String xmlTemplate, Properties properties) {
+        if (xmlTemplate == null) {
+            throw new IllegalArgumentException("XML template cannot be null");
         }
+        if (properties == null) {
+            throw new IllegalArgumentException("Properties cannot be null");
+        }
+        StringBuilder result = new StringBuilder(xmlTemplate);
+
+        for (String key : properties.stringPropertyNames()) {
+            String value = properties.getProperty(key);
+            if (value != null) {
+                int start;
+                String placeholder = "${" + key + "}";
+                while ((start = result.indexOf(placeholder)) != -1) {
+                    result.replace(start, start + placeholder.length(), value);
+                }
+            }
+        }
+        return result.toString();
     }
-    return xmlTemplate;
-}
 
     public static Properties loadProperties(String filePath) throws IOException {
         if (filePath == null || filePath.trim().isEmpty()) {
