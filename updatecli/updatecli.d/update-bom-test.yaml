@@ -4,34 +4,32 @@ scms:
   default:
     kind: github
     spec:
-      user: "{{ .github.user }}"
-      email: "{{ .github.email }}"
-      owner: "{{ .github.owner }}"
-      repository: "{{ .github.repository }}"
-      token: "{{ requiredEnv .github.token }}"
-      username: "{{ .github.username }}"
-      branch: "{{ .github.branch }}"
+      user: '{{ .github.user }}'
+      email: '{{ .github.email }}'
+      owner: '{{ .github.owner }}'
+      repository: '{{ .github.repository }}'
+      token: '{{ requiredEnv .github.token }}'
+      username: '{{ .github.username }}'
+      branch: '{{ .github.branch }}'
 
 sources:
   latestBomVersion:
-    kind: githubrelease
+    kind: maven
     spec:
-      owner: "jenkinsci"
-      repository: "bom"
-      token: "{{ requiredEnv .github.token }}"
-      username: "{{ .github.username }}"
-      versioning:
-        kind: semver
-        pattern: "latest"
+      repository: 'repo.jenkins-ci.org/releases'
+      groupid: 'io.jenkins.tools.bom'
+      artifactid: 'bom-2.452.x'
 
 targets:
   updateBomVersionInTest:
-    name: "Update io.jenkins.tools.bom:bom-2.452.x version in UpdateBomTest.java"
+    name: 'Update io.jenkins.tools.bom:bom-2.452.x version in UpdateBomTest.java'
     kind: file
     spec:
-      file: ./plugin-modernizer-core/src/test/java/io/jenkins/tools/pluginmodernizer/core/recipes/UpdateBomTest.java
-      matchPattern: "(?m)<version>.*</version>"
-      replacePattern: '<version>{{ source "latestBomVersion" }}</version>'
+      file: "plugin-modernizer-core/src/test/java/io/jenkins/tools/pluginmodernizer/core/recipes/UpdateBomTest.java"
+      matchPattern: >-
+        (.*<artifactId>bom-2\.452\.x</artifactId>\s*<version>)([^<]+)(</version>)
+      replacePattern: >-
+        ${1}{{ source "latestBomVersion" }}${3}
     sourceid: latestBomVersion
     scmid: default
 
@@ -44,3 +42,4 @@ actions:
       labels:
         - dependencies
         - updatecli
+# (\s*<groupId>io\.jenkins\.tools\\.bom</groupId>\s*<artifactId>bom-2\.452\.x</artifactId>\s*<version>)([^<]+)(</version>)
