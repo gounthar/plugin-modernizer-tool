@@ -215,8 +215,7 @@ public class UpdateBomTest implements RewriteTest {
                       <dependencies>
                         <dependency>
                           <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.452.x</artifactId>
-                          <version>3956.v1c544c9d8819</version>
+.v1a_e4f8b_452db_</version>
                           <type>pom</type>
                           <scope>import</scope>
                         </dependency>
@@ -246,8 +245,7 @@ public class UpdateBomTest implements RewriteTest {
                       <dependencies>
                         <dependency>
                           <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.452.x</artifactId>
-                          <version>3959.v187ce50819e9</version>
+.v1a_e4f8b_452db_</version>
                           <type>pom</type>
                           <scope>import</scope>
                         </dependency>
