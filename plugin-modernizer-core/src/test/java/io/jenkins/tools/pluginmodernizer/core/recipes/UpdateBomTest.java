@@ -2,6 +2,9 @@ package io.jenkins.tools.pluginmodernizer.core.recipes;
 
 import static org.openrewrite.maven.Assertions.pomXml;
 
+import io.jenkins.tools.pluginmodernizer.core.utils.XmlTestDataLoader;
+import java.io.IOException;
+import java.util.Properties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import org.junit.jupiter.api.parallel.ExecutionMode;
@@ -16,355 +19,81 @@ import org.openrewrite.test.RewriteTest;
 public class UpdateBomTest implements RewriteTest {
 
     @Test
-    void shouldSkipIfNoBom() {
+    void shouldSkipIfNoBom() throws IOException {
+        String xmlTemplate = XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/base/pom.xml");
+        Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
+        String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
+
         rewriteRun(
                 spec -> spec.recipe(new UpdateBom()),
                 // language=xml
-                pomXml(
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440</jenkins.version>
-                   </properties>
-                 </project>
-                 """));
+                pomXml(customizedXml));
     }
 
     @Test
-    void shouldUpdateToLatestReleasedWithoutMavenConfig() {
+    void shouldUpdateToLatestReleasedWithoutMavenConfig() throws IOException {
+        String xmlTemplate = XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/bom/bom-configuration.xml");
+        Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
+        String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
+
         rewriteRun(
                 spec -> spec.recipe(new UpdateBom()),
                 // language=xml
-                pomXml(
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440.3</jenkins.version>
-                   </properties>
-                    <dependencyManagement>
-                      <dependencies>
-                        <dependency>
-                          <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.440.x</artifactId>
-                          <version>2746.vb_79a_1d3e7b_c8</version>
-                          <type>pom</type>
-                          <scope>import</scope>
-                        </dependency>
-                      </dependencies>
-                    </dependencyManagement>
-                    <repositories>
-                      <repository>
-                        <id>repo.jenkins-ci.org</id>
-                        <url>https://repo.jenkins-ci.org/public/</url>
-                      </repository>
-                    </repositories>
-                 </project>
-                 """,
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440.3</jenkins.version>
-                   </properties>
-                    <dependencyManagement>
-                      <dependencies>
-                        <dependency>
-                          <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.440.x</artifactId>
-                          <version>3435.v238d66a_043fb_</version>
-                          <type>pom</type>
-                          <scope>import</scope>
-                        </dependency>
-                      </dependencies>
-                    </dependencyManagement>
-                    <repositories>
-                      <repository>
-                        <id>repo.jenkins-ci.org</id>
-                        <url>https://repo.jenkins-ci.org/public/</url>
-                      </repository>
-                    </repositories>
-                 </project>
-                 """));
+                pomXml(customizedXml));
     }
 
     @Test
     @Issue("https://github.com/jenkins-infra/plugin-modernizer-tool/issues/534")
-    void shouldUpdateToLatestReleasedWithIncrementalsEnabled() {
+    void shouldUpdateToLatestReleasedWithIncrementalsEnabled() throws IOException {
+        String xmlTemplate =
+                XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/incrementals/incrementals-configuration.xml");
+        Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
+        String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
+
         rewriteRun(
                 spec -> {
                     spec.parser(MavenParser.builder().activeProfiles("consume-incrementals"));
                     spec.recipe(new UpdateBom());
                 },
                 // language=xml
-                pomXml(
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <parent>
-                     <groupId>org.jenkins-ci.plugins</groupId>
-                     <artifactId>plugin</artifactId>
-                     <version>4.88</version>
-                     <relativePath />
-                   </parent>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440.3</jenkins.version>
-                   </properties>
-                    <dependencyManagement>
-                      <dependencies>
-                        <dependency>
-                          <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.440.x</artifactId>
-                          <version>2746.vb_79a_1d3e7b_c8</version>
-                          <type>pom</type>
-                          <scope>import</scope>
-                        </dependency>
-                      </dependencies>
-                    </dependencyManagement>
-                    <repositories>
-                      <repository>
-                        <id>repo.jenkins-ci.org</id>
-                        <url>https://repo.jenkins-ci.org/public/</url>
-                      </repository>
-                    </repositories>
-                 </project>
-                 """,
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <parent>
-                     <groupId>org.jenkins-ci.plugins</groupId>
-                     <artifactId>plugin</artifactId>
-                     <version>4.88</version>
-                     <relativePath />
-                   </parent>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440.3</jenkins.version>
-                   </properties>
-                    <dependencyManagement>
-                      <dependencies>
-                        <dependency>
-                          <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.440.x</artifactId>
-                          <version>3435.v238d66a_043fb_</version>
-                          <type>pom</type>
-                          <scope>import</scope>
-                        </dependency>
-                      </dependencies>
-                    </dependencyManagement>
-                    <repositories>
-                      <repository>
-                        <id>repo.jenkins-ci.org</id>
-                        <url>https://repo.jenkins-ci.org/public/</url>
-                      </repository>
-                    </repositories>
-                 </project>
-                 """));
+                pomXml(customizedXml));
     }
 
     @Test
-    void shouldUpdateToLatestIncrementalsWithoutMavenConfig() {
+    void shouldUpdateToLatestIncrementalsWithoutMavenConfig() throws IOException {
+        String xmlTemplate =
+                XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/incrementals/incrementals-configuration.xml");
+        Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
+        String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
+
         rewriteRun(
                 spec -> spec.recipe(new UpdateBom()),
                 // language=xml
-                pomXml(
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440.3</jenkins.version>
-                   </properties>
-                    <dependencyManagement>
-                      <dependencies>
-                        <dependency>
-                          <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.452.x</artifactId>
-                          <version>3956.v1c544c9d8819</version>
-                          <type>pom</type>
-                          <scope>import</scope>
-                        </dependency>
-                      </dependencies>
-                    </dependencyManagement>
-                    <repositories>
-                      <repository>
-                        <id>repo.jenkins-ci.org</id>
-                        <url>https://repo.jenkins-ci.org/incrementals/</url>
-                      </repository>
-                    </repositories>
-                 </project>
-                 """,
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>empty</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Empty Plugin</name>
-                   <properties>
-                        <jenkins.version>2.440.3</jenkins.version>
-                   </properties>
-                    <dependencyManagement>
-                      <dependencies>
-                        <dependency>
-                          <groupId>io.jenkins.tools.bom</groupId>
-                          <artifactId>bom-2.452.x</artifactId>
-                          <version>3959.v187ce50819e9</version>
-                          <type>pom</type>
-                          <scope>import</scope>
-                        </dependency>
-                      </dependencies>
-                    </dependencyManagement>
-                    <repositories>
-                      <repository>
-                        <id>repo.jenkins-ci.org</id>
-                        <url>https://repo.jenkins-ci.org/incrementals/</url>
-                      </repository>
-                    </repositories>
-                 </project>
-                 """));
+                pomXml(customizedXml));
     }
 
     @Test
-    void shouldSkipIfOnParentBom() {
+    void shouldSkipIfOnParentBom() throws IOException {
+        String xmlTemplate = XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/base/pom.xml");
+        Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
+        String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
+
         rewriteRun(
                 spec -> spec.recipe(new UpdateBom()),
                 // language=xml
-                pomXml(
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <parent>
-                     <groupId>org.jvnet.hudson.plugins</groupId>
-                     <artifactId>analysis-pom</artifactId>
-                     <version>10.0.0</version>
-                     <relativePath />
-                   </parent>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>checks</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Checks Plugin</name>
-                   <repositories>
-                     <repository>
-                       <id>repo.jenkins-ci.org</id>
-                       <url>https://repo.jenkins-ci.org/public/</url>
-                     </repository>
-                   </repositories>
-                 </project>
-                 """));
+                pomXml(customizedXml));
     }
 
     @Test
-    void shouldUpgradePropertyForVersion() {
+    void shouldUpgradePropertyForVersion() throws IOException {
+        String xmlTemplate =
+                XmlTestDataLoader.loadXmlTemplate("src/test/resources/xml/properties/properties-configuration.xml");
+        Properties properties = XmlTestDataLoader.loadProperties("src/test/resources/properties/versions.properties");
+        String customizedXml = XmlTestDataLoader.customizeXmlTemplate(xmlTemplate, properties);
+
         rewriteRun(
                 spec -> spec.recipe(new UpdateBom()),
                 // language=xml
-                pomXml(
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>non-standard</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Checks Plugin</name>
-                   <properties>
-                     <jenkins.version>2.401.3</jenkins.version>
-                     <bom.artifactId>bom-2.401.x</bom.artifactId>
-                     <bom.version>2555.v3190a_8a_c60c6</bom.version>
-                   </properties>
-                   <dependencyManagement>
-                     <dependencies>
-                       <dependency>
-                         <groupId>io.jenkins.tools.bom</groupId>
-                         <artifactId>${bom.artifactId}</artifactId>
-                         <version>${bom.version}</version>
-                         <type>pom</type>
-                         <scope>import</scope>
-                       </dependency>
-                     </dependencies>
-                   </dependencyManagement>
-                   <repositories>
-                     <repository>
-                       <id>repo.jenkins-ci.org</id>
-                       <url>https://repo.jenkins-ci.org/public/</url>
-                     </repository>
-                   </repositories>
-                 </project>
-                 """,
-                        """
-                 <?xml version="1.0" encoding="UTF-8"?>
-                 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-                   <modelVersion>4.0.0</modelVersion>
-                   <groupId>io.jenkins.plugins</groupId>
-                   <artifactId>non-standard</artifactId>
-                   <version>1.0.0-SNAPSHOT</version>
-                   <packaging>hpi</packaging>
-                   <name>Checks Plugin</name>
-                   <properties>
-                     <jenkins.version>2.401.3</jenkins.version>
-                     <bom.artifactId>bom-2.401.x</bom.artifactId>
-                     <bom.version>2745.vc7b_fe4c876fa_</bom.version>
-                   </properties>
-                   <dependencyManagement>
-                     <dependencies>
-                       <dependency>
-                         <groupId>io.jenkins.tools.bom</groupId>
-                         <artifactId>${bom.artifactId}</artifactId>
-                         <version>${bom.version}</version>
-                         <type>pom</type>
-                         <scope>import</scope>
-                       </dependency>
-                     </dependencies>
-                   </dependencyManagement>
-                   <repositories>
-                     <repository>
-                       <id>repo.jenkins-ci.org</id>
-                       <url>https://repo.jenkins-ci.org/public/</url>
-                     </repository>
-                   </repositories>
-                 </project>
-                 """));
+                pomXml(customizedXml));
     }
 }
