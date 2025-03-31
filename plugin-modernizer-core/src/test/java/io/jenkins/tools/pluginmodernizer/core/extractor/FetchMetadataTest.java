@@ -851,4 +851,40 @@ public class FetchMetadataTest implements RewriteTest {
         assertTrue(pluginMetadata.isUseContainerAgent());
         assertEquals("1C", pluginMetadata.getForkCount());
     }
+
+    @Test
+    void testWithJenkinsfileWithShebang() throws Exception {
+        rewriteRun(
+                recipeSpec -> recipeSpec.recipe(new FetchMetadata()),
+                // language=groovy
+                groovy(
+                        """
+                         #!/usr/bin/env groovy
+                         buildPlugin(
+                         useContainerAgent: false,
+                         forkCount: '1C',
+                         configurations: [
+                                [platform: 'linux', jdk: 21],
+                                [platform: 'windows', jdk: 17],
+                         ])
+                         """,
+                        spec -> spec.path("Jenkinsfile")));
+
+        PluginMetadata pluginMetadata = new PluginMetadata().refresh();
+        assertNotNull(pluginMetadata, "Plugin metadata was not written by the recipe");
+        // Only Jenkinsfile here
+        assertEquals(List.of(ArchetypeCommonFile.JENKINSFILE), pluginMetadata.getCommonFiles());
+
+        // Assert JDK
+        Set<JDK> jdkVersion = pluginMetadata.getJdks();
+        assertEquals(2, jdkVersion.size());
+        assertFalse(pluginMetadata.isUseContainerAgent());
+        assertEquals("1C", pluginMetadata.getForkCount());
+
+        // Assert platform
+        Set<Platform> platforms = pluginMetadata.getPlatforms();
+        assertEquals(2, platforms.size());
+        assertTrue(platforms.contains(Platform.WINDOWS));
+        assertTrue(platforms.contains(Platform.LINUX));
+    }
 }
