@@ -144,7 +144,8 @@ public class JenkinsfileVisitor extends GroovyIsoVisitor<PluginMetadata> {
             List<PlatformConfig> platformFromConfigs = configurations
                     .map(entry -> resolveIdentifier(entry.getValue()))
                     .filter(value -> value instanceof G.ListLiteral)
-                    .flatMap(value -> ((G.ListLiteral) value).getElements().stream())
+                    .map(value -> (G.ListLiteral) value)
+                    .flatMap(value -> value.getElements().stream())
                     .filter(expression -> expression instanceof G.MapLiteral)
                     .map(expression -> (G.MapLiteral) expression)
                     .map(JenkinsfileVisitor::toPlatformEntry)
