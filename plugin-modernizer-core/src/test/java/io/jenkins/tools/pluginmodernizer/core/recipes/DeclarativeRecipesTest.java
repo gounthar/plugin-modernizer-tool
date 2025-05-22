@@ -3368,7 +3368,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                 import org.junit.rules.TemporaryFolder;
                 import java.io.File;
 
-                public class MyTest {
+                class MyTest {
                     @Rule
                     public JenkinsRule j = new JenkinsRule();
                     private TemporaryFolder tempFolder;
@@ -3429,6 +3429,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         Assert.fail("This should not run");
                     }
                 }
+                public class MyTestChild extends MyTest {
+                    @Test
+                    public void myTestMethodChild() {
+                        j.before();
+                    }
+                }
                 """,
                         """
                 import org.junit.jupiter.api.*;
@@ -3436,12 +3442,13 @@ public class DeclarativeRecipesTest implements RewriteTest {
                 import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
                 import org.hamcrest.Matchers;
                 import java.io.File;
+                import java.io.IOException;
+                import java.nio.file.Files;
 
                 import static org.hamcrest.MatcherAssert.assertThat;
                 import static org.junit.jupiter.api.Assertions.*;
 
                 @WithJenkins
-
                 class MyTest {
                     private File tempFolder;
 
@@ -3452,7 +3459,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
 
                     @BeforeEach
                     void setUp() throws Exception {
-                        tempFolder = new File();
+                        tempFolder = Files.createTempDirectory("junit").toFile();
                     }
 
                     @AfterEach
@@ -3462,7 +3469,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
 
                     @Test
                     void testSomething() throws Exception {
-                        File tempFile = File.createTempFile("test.txt", null, tempFolder);
+                        File tempFile = newFile(tempFolder, "test.txt");
                         assertTrue(tempFile.exists(), "File should exist");
                         assertEquals(0, tempFile.length());
                     }
@@ -3498,6 +3505,25 @@ public class DeclarativeRecipesTest implements RewriteTest {
                     @Test
                     void ignoredTest() {
                         fail("This should not run");
+                    }
+
+                    private static File newFile(File parent, String child) throws IOException {
+                        File result = new File(parent, child);
+                        result.createNewFile();
+                        return result;
+                    }
+                }
+
+                class MyTestChild extends MyTest {
+                    @Test
+                    public void myTestMethodChild(JenkinsRule j) {
+                        j.before();
+                    }
+
+                    private static File newFile(File parent, String child) throws IOException {
+                        File result = new File(parent, child);
+                        result.createNewFile();
+                        return result;
                     }
                 }
                 """));
