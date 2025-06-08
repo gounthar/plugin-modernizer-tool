@@ -3,6 +3,7 @@ package io.jenkins.tools.pluginmodernizer.core.impl;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.config.Settings;
+import io.jenkins.tools.pluginmodernizer.core.extractor.ModernizationMetadata;
 import io.jenkins.tools.pluginmodernizer.core.extractor.PluginMetadata;
 import io.jenkins.tools.pluginmodernizer.core.github.GHService;
 import io.jenkins.tools.pluginmodernizer.core.model.JDK;
@@ -238,6 +239,31 @@ public class PluginModernizer {
             } else {
                 LOG.debug("Metadata already computed for plugin {}. Using cached metadata.", plugin.getName());
             }
+
+            ModernizationMetadata modernizationMetadata = new ModernizationMetadata(cacheManager, plugin);
+            modernizationMetadata.setPluginName(plugin.getMetadata().getPluginName());
+            modernizationMetadata.setRpuBaseline(
+                    plugin.getMetadata().getJenkinsVersion().replaceAll("(\\d+\\.\\d+)\\.\\d+", "$1"));
+            try {
+                modernizationMetadata.setPluginRepository(
+                        ghService.getRepository(plugin).getHttpTransportUrl());
+            } catch (PluginProcessingException e) {
+                LOG.warn("Skipping GitHub repo fetch in CI test for plugin {}", plugin.getName());
+            }
+            modernizationMetadata.setPluginVersion(pluginService.extractVersion(plugin));
+            modernizationMetadata.setMigrationName(
+                    plugin.getConfig().getRecipe().getDisplayName());
+            modernizationMetadata.setMigrationDescription(
+                    plugin.getConfig().getRecipe().getDescription());
+            modernizationMetadata.setPluginName(plugin.getName());
+            modernizationMetadata.setTags(plugin.getConfig().getRecipe().getTags());
+            modernizationMetadata.setMigrationId(plugin.getConfig().getRecipe().getName());
+            plugin.setModernizationMetadata(modernizationMetadata);
+            modernizationMetadata.save();
+            LOG.info(
+                    "Modernization metadata for plugin {}: {}",
+                    plugin.getName(),
+                    modernizationMetadata.getLocation().toAbsolutePath());
 
             // Try to remediate precondition errors
             if (plugin.hasPreconditionErrors()) {
@@ -497,13 +523,14 @@ public class PluginModernizer {
                             plugin.getName(),
                             plugin.getMetadata().getLocation().toAbsolutePath());
                 } else if (config.isDryRun()) {
-                    LOG.info("Dry run mode. Changes were made on " + plugin.getLocalRepository() + " but not commited");
+                    LOG.info(
+                            "Dry run mode. Changes were made on " + plugin.getLocalRepository() + " but not committed");
                     printModifiedFiles(plugin);
                 } else if (plugin.isLocal()) {
                     LOG.info("Changes were made on " + plugin.getLocalRepository());
                     printModifiedFiles(plugin);
                 } else if (!plugin.hasErrors()) {
-                    // Change were made
+                    // Changes were made
                     LOG.info("Pull request was open on "
                             + plugin.getRemoteRepository(this.ghService).getHtmlUrl());
                     printModifiedFiles(plugin);
@@ -515,7 +542,7 @@ public class PluginModernizer {
 
     private void printModifiedFiles(Plugin plugin) {
         if (plugin.getModifiedFiles().isEmpty()) {
-            LOG.info("Recipe didn't made any changes");
+            LOG.info("Recipe didn't make any change.");
             return;
         }
         for (String modification : plugin.getModifiedFiles()) {

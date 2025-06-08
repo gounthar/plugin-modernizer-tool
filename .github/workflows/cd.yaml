@@ -85,7 +85,7 @@ jobs:
           CHECKSUM: a555254d6b53d267965a3404ecb14e53c3827c09c3b94b5678835887ab404556bfaf78dcfe03ba76fa2508649dca8531c74bca4d5846513522404d48e8c4ac8b
 
       - name: Release
-        uses: jenkins-infra/jenkins-maven-cd-action@v1.3.3
+        uses: jenkins-infra/jenkins-maven-cd-action@v1.4.1
         with:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
@@ -107,9 +107,9 @@ jobs:
           JRELEASER_PROJECT_VERSION: ${{ steps.extract-version.outputs.version }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate Homebrew token
+      - name: Generate token
         uses: tibdex/github-app-token@v2
-        id: generate_homebrew_token
+        id: generate_token
         with:
           app_id: ${{ secrets.GORELEASER_APP_ID }}
           private_key: ${{ secrets.GORELEASER_APP_PRIVKEY }}
@@ -122,7 +122,8 @@ jobs:
         env:
           JRELEASER_PROJECT_VERSION: ${{ steps.extract-version.outputs.version }}
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          JRELEASER_HOMEBREW_GITHUB_TOKEN: ${{ steps.generate_homebrew_token.outputs.token }}
+          JRELEASER_HOMEBREW_GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          JRELEASER_SCOOP_GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
 
       - name: Archive output
         if: always()

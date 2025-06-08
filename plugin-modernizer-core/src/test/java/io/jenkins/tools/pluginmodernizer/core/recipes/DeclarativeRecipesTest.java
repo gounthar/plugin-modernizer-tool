@@ -33,9 +33,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Test for declarative recipes from recipes.yml.
  */
-// ConcurrentModification on rewriteRun (need fix upstream?
-// This only occur on recipeFromResource
-@Execution(ExecutionMode.SAME_THREAD)
+@Execution(ExecutionMode.CONCURRENT)
 public class DeclarativeRecipesTest implements RewriteTest {
 
     @Language("xml")
@@ -648,9 +646,14 @@ public class DeclarativeRecipesTest implements RewriteTest {
     @Test
     void upgradeToRecommendCoreVersionTest() {
         rewriteRun(
-                spec -> spec.recipeFromResource(
-                        "/META-INF/rewrite/recipes.yml",
-                        "io.jenkins.tools.pluginmodernizer.UpgradeToRecommendCoreVersion"),
+                spec -> {
+                    var parser = JavaParser.fromJavaVersion().logCompilationWarningsAndErrors(true);
+                    collectRewriteTestDependencies().forEach(parser::addClasspathEntry);
+                    spec.recipeFromResource(
+                                    "/META-INF/rewrite/recipes.yml",
+                                    "io.jenkins.tools.pluginmodernizer.UpgradeToRecommendCoreVersion")
+                            .parser(parser);
+                },
                 // language=yaml
                 yaml("{}", sourceSpecs -> {
                     sourceSpecs.path(ArchetypeCommonFile.WORKFLOW_CD.getPath());
@@ -708,6 +711,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                               <groupId>org.jenkins-ci.main</groupId>
                               <artifactId>jenkins-test-harness</artifactId>
                               <version>2.41.1</version>
+                            </dependency>
+                            <dependency>
+                              <groupId>com.github.tomakehurst</groupId>
+                              <artifactId>wiremock-jre8-standalone</artifactId>
+                              <version>2.35.2</version>
+                              <scope>test</scope>
                             </dependency>
                           </dependencies>
                           <repositories>
@@ -768,6 +777,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                               <groupId>org.jenkins-ci.main</groupId>
                               <artifactId>jenkins-test-harness</artifactId>
                             </dependency>
+                            <dependency>
+                              <groupId>org.wiremock</groupId>
+                              <artifactId>wiremock-standalone</artifactId>
+                              <version>%s</version>
+                              <scope>test</scope>
+                            </dependency>
                           </dependencies>
                           <repositories>
                             <repository>
@@ -786,7 +801,56 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 .formatted(
                                         Settings.getJenkinsMinimumBaseline(),
                                         Settings.getJenkinsMinimumPatchVersion(),
-                                        Settings.getBomVersion())));
+                                        Settings.getRecommendedBomVersion(),
+                                        Settings.getWiremockVersion())),
+                srcMainResources(
+                        // language=java
+                        java(
+                                """
+                                import hudson.util.IOException2;
+                                import java.io.File;
+                                import java.io.IOException;
+
+                                public class Foo {
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException2 e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException2 {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException2("Failed to parse file: " + file.getName(), e);
+                                        }
+                                    }
+                                }
+                                """,
+                                """
+                                import java.io.File;
+                                import java.io.IOException;
+
+                                public class Foo {
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException("Failed to parse file: " + file.getName(), e);
+                                        }
+                                    }
+                                }
+                                """)));
     }
 
     @Test
@@ -1022,7 +1086,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 .formatted(
                                         Settings.getJenkinsMinimumBaseline(),
                                         Settings.getJenkinsMinimumPatchVersion(),
-                                        Settings.getBomVersion())));
+                                        Settings.getRecommendedBomVersion())));
     }
 
     @Test
@@ -1117,6 +1181,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <groupId>io.jenkins.plugins</groupId>
                           <artifactId>json-api</artifactId>
                         </dependency>
+                        <dependency>
+                          <groupId>com.github.tomakehurst</groupId>
+                          <artifactId>wiremock</artifactId>
+                          <version>3.0.1</version>
+                          <scope>test</scope>
+                        </dependency>
                       </dependencies>
                     </project>
                     """,
@@ -1185,21 +1255,35 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <groupId>io.jenkins.plugins</groupId>
                           <artifactId>json-api</artifactId>
                         </dependency>
+                        <dependency>
+                          <groupId>org.wiremock</groupId>
+                          <artifactId>wiremock</artifactId>
+                          <version>%s</version>
+                          <scope>test</scope>
+                        </dependency>
                       </dependencies>
                     </project>
                     """
                                 .formatted(
                                         Settings.getJenkinsMinimumBaseline(),
                                         Settings.getJenkinsMinimumPatchVersion(),
-                                        Settings.getBomVersion())));
+                                        Settings.getRecommendedBomVersion(),
+                                        Settings.getWiremockVersion())));
     }
 
     @Test
     void upgradeToUpgradeToLatestJava11CoreVersion() {
         rewriteRun(
-                spec -> spec.recipeFromResource(
-                        "/META-INF/rewrite/recipes.yml",
-                        "io.jenkins.tools.pluginmodernizer.UpgradeToLatestJava11CoreVersion"),
+                spec -> {
+                    var parser = JavaParser.fromJavaVersion().logCompilationWarningsAndErrors(true);
+                    collectRewriteTestDependencies().stream()
+                            .filter(entry -> entry.getFileName().toString().contains("jenkins-core-2.497"))
+                            .forEach(parser::addClasspathEntry);
+                    spec.recipeFromResource(
+                                    "/META-INF/rewrite/recipes.yml",
+                                    "io.jenkins.tools.pluginmodernizer.UpgradeToLatestJava11CoreVersion")
+                            .parser(parser);
+                },
                 // language=xml
                 srcMainResources(text(
                         null,
@@ -1257,6 +1341,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 <artifactId>jenkins-test-harness</artifactId>
                                 <version>2.41.1</version>
                               </dependency>
+                              <dependency>
+                                <groupId>com.github.tomakehurst</groupId>
+                                <artifactId>wiremock-jre8-standalone</artifactId>
+                                <version>2.35.2</version>
+                                <scope>test</scope>
+                              </dependency>
                             </dependencies>
                           <repositories>
                             <repository>
@@ -1312,6 +1402,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 <groupId>org.jenkins-ci.main</groupId>
                                 <artifactId>jenkins-test-harness</artifactId>
                               </dependency>
+                              <dependency>
+                                <groupId>org.wiremock</groupId>
+                                <artifactId>wiremock-standalone</artifactId>
+                                <version>%s</version>
+                                <scope>test</scope>
+                              </dependency>
                             </dependencies>
                           <repositories>
                             <repository>
@@ -1327,7 +1423,55 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           </pluginRepositories>
                         </project>
                         """
-                                .formatted(Settings.getBomVersion())));
+                                .formatted(Settings.getRecommendedBomVersion(), Settings.getWiremockVersion())),
+                srcMainResources(
+                        // language=java
+                        java(
+                                """
+                                import hudson.util.IOException2;
+                                import java.io.File;
+                                import java.io.IOException;
+
+                                public class Foo {
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException2 e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException2 {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException2("Failed to parse file: " + file.getName(), e);
+                                        }
+                                    }
+                                }
+                                """,
+                                """
+                                import java.io.File;
+                                import java.io.IOException;
+
+                                public class Foo {
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException("Failed to parse file: " + file.getName(), e);
+                                        }
+                                    }
+                                }
+                                """)));
     }
 
     @Test
@@ -1336,7 +1480,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                 spec -> {
                     var parser = JavaParser.fromJavaVersion().logCompilationWarningsAndErrors(true);
                     collectRewriteTestDependencies().stream()
-                            .filter(entry -> entry.getFileName().toString().contains("ssh-slaves-1.12"))
+                            .filter(entry -> entry.getFileName().toString().contains("ssh-slaves-1.12")
+                                    || entry.getFileName().toString().contains("jenkins-core-2.497"))
                             .forEach(parser::addClasspathEntry);
                     spec.recipeFromResource(
                                     "/META-INF/rewrite/recipes.yml",
@@ -1558,126 +1703,151 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         """),
                 srcTestJava(
                         java(
+                                // language=java
                                 """
                         package hudson.maven;
                         public class MavenModuleSet {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.scm;
                         public class SubversionSCM {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.tasks;
                         public class Ant {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.tasks;
                         public class JavadocArchiver {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.tasks;
                         public class Mailer {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.tasks.junit;
                         public class JUnitResultArchiver {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.model;
                         public class ExternalJob {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.security;
                         public class LDAPSecurityRealm {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.security;
                         public class PAMSecurityRealm {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.security;
                         public class GlobalMatrixAuthorizationStrategy {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.security;
                         public class ProjectMatrixAuthorizationStrategy {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.security;
                         public class AuthorizationMatrixProperty {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.slaves;
                         public class CommandLauncher {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.tools;
                         public class JDKInstaller {}
                         """),
                         java(
+                                // language=java
                                 """
                         package javax.xml.bind;
                         public class JAXBContext {}
                         """),
                         java(
+                                // language=java
                                 """
                         package com.trilead.ssh2;
                         public class Connection {}
                         """),
                         java(
+                                // language=java
                                 """
                         package org.jenkinsci.main.modules.sshd;
                         public class SSHD {}
                         """),
                         java(
+                                // language=java
                                 """
                         package javax.activation;
                         public class DataHandler {}
                         """),
                         java(
+                                // language=java
                                 """
                         package jenkins.bouncycastle.api;
                         public class BouncyCastlePlugin {}
                         """),
                         java(
+                                // language=java
                                 """
                         package jenkins.plugins.javax.activation;
                         public class CommandMapInitializer {}
                         """),
                         java(
+                                // language=java
                                 """
                         package jenkins.plugins.javax.activation;
                         public class FileTypeMapInitializer {}
                         """),
                         java(
+                                // language=java
                                 """
                         package org.jenkinsci.main.modules.instance_identity;
                         public class InstanceIdentity {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.markup;
                         public class RawHtmlMarkupFormatter {}
                         """),
                         java(
+                                // language=java
                                 """
                         package hudson.matrix;
                         public class MatrixProject {}
                         """)),
                 srcMainJava(
+                        // language=java
                         java(
                                 """
                         import hudson.maven.MavenModuleSet;
@@ -1704,6 +1874,9 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
                         import hudson.markup.RawHtmlMarkupFormatter;
                         import hudson.matrix.MatrixProject;
+                        import hudson.util.IOException2;
+                        import java.io.File;
+                        import java.io.IOException;
 
                         public class TestDetachedPluginsUsage {
                             public void execute() {
@@ -1731,6 +1904,93 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 new InstanceIdentity();
                                 new RawHtmlMarkupFormatter();
                                 new MatrixProject();
+                            }
+                            private static void parseFile(File file) throws IOException2 {
+                                try {
+                                    throw new IOException("Unable to read file");
+                                } catch (IOException e) {
+                                    throw new IOException2("Failed to parse file: " + file.getName(), e);
+                                }
+                            }
+                            public static void main(String[] args) {
+                                try {
+                                    parseFile(new File("invalid.xml"));
+                                } catch (IOException2 e) {
+                                    System.out.println("Caught custom exception: " + e.getMessage());
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                        """,
+                                """
+                        import hudson.maven.MavenModuleSet;
+                        import hudson.scm.SubversionSCM;
+                        import hudson.tasks.Ant;
+                        import hudson.tasks.JavadocArchiver;
+                        import hudson.tasks.Mailer;
+                        import hudson.tasks.junit.JUnitResultArchiver;
+                        import hudson.model.ExternalJob;
+                        import hudson.security.LDAPSecurityRealm;
+                        import hudson.security.PAMSecurityRealm;
+                        import hudson.security.GlobalMatrixAuthorizationStrategy;
+                        import hudson.security.ProjectMatrixAuthorizationStrategy;
+                        import hudson.security.AuthorizationMatrixProperty;
+                        import hudson.slaves.CommandLauncher;
+                        import hudson.tools.JDKInstaller;
+                        import javax.xml.bind.JAXBContext;
+                        import com.trilead.ssh2.Connection;
+                        import org.jenkinsci.main.modules.sshd.SSHD;
+                        import javax.activation.DataHandler;
+                        import jenkins.bouncycastle.api.BouncyCastlePlugin;
+                        import jenkins.plugins.javax.activation.CommandMapInitializer;
+                        import jenkins.plugins.javax.activation.FileTypeMapInitializer;
+                        import org.jenkinsci.main.modules.instance_identity.InstanceIdentity;
+                        import hudson.markup.RawHtmlMarkupFormatter;
+                        import hudson.matrix.MatrixProject;
+                        import java.io.File;
+                        import java.io.IOException;
+
+                        public class TestDetachedPluginsUsage {
+                            public void execute() {
+                                new MavenModuleSet();
+                                new SubversionSCM();
+                                new Ant();
+                                new JavadocArchiver();
+                                new Mailer();
+                                new JUnitResultArchiver();
+                                new ExternalJob();
+                                new LDAPSecurityRealm();
+                                new PAMSecurityRealm();
+                                new GlobalMatrixAuthorizationStrategy();
+                                new ProjectMatrixAuthorizationStrategy();
+                                new AuthorizationMatrixProperty();
+                                new CommandLauncher();
+                                new JDKInstaller();
+                                new JAXBContext();
+                                new Connection();
+                                new SSHD();
+                                new DataHandler();
+                                new BouncyCastlePlugin();
+                                new CommandMapInitializer();
+                                new FileTypeMapInitializer();
+                                new InstanceIdentity();
+                                new RawHtmlMarkupFormatter();
+                                new MatrixProject();
+                            }
+                            private static void parseFile(File file) throws IOException {
+                                try {
+                                    throw new IOException("Unable to read file");
+                                } catch (IOException e) {
+                                    throw new IOException("Failed to parse file: " + file.getName(), e);
+                                }
+                            }
+                            public static void main(String[] args) {
+                                try {
+                                    parseFile(new File("invalid.xml"));
+                                } catch (IOException e) {
+                                    System.out.println("Caught custom exception: " + e.getMessage());
+                                    e.printStackTrace();
+                                }
                             }
                         }
                         """)));
@@ -1792,6 +2052,14 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 <maven.compiler.target>11</maven.compiler.target>
                                 <maven.compiler.release>11</maven.compiler.release>
                               </properties>
+                              <dependencies>
+                                <dependency>
+                                  <groupId>com.github.tomakehurst</groupId>
+                                  <artifactId>wiremock-jre8-standalone</artifactId>
+                                  <version>2.35.2</version>
+                                  <scope>test</scope>
+                                </dependency>
+                              </dependencies>
                               <repositories>
                                 <repository>
                                   <id>repo.jenkins-ci.org</id>
@@ -1826,8 +2094,16 @@ public class DeclarativeRecipesTest implements RewriteTest {
                               </scm>
                               <properties>
                                 <jenkins-test-harness.version>%s</jenkins-test-harness.version>
-                                <jenkins.version>2.479.1</jenkins.version>
+                                <jenkins.version>2.492.3</jenkins.version>
                               </properties>
+                              <dependencies>
+                                <dependency>
+                                  <groupId>org.wiremock</groupId>
+                                  <artifactId>wiremock-standalone</artifactId>
+                                  <version>%s</version>
+                                  <scope>test</scope>
+                                </dependency>
+                              </dependencies>
                               <repositories>
                                 <repository>
                                   <id>repo.jenkins-ci.org</id>
@@ -1843,7 +2119,9 @@ public class DeclarativeRecipesTest implements RewriteTest {
                             </project>
                             """
                                 .formatted(
-                                        Settings.getJenkinsParentVersion(), Settings.getJenkinsTestHarnessVersion())),
+                                        Settings.getJenkinsParentVersion(),
+                                        Settings.getJenkinsTestHarnessVersion(),
+                                        Settings.getWiremockVersion())),
                 srcMainResources(
                         // language=java
                         java(
@@ -1852,11 +2130,56 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 import org.kohsuke.stapler.Stapler;
                                 import org.kohsuke.stapler.StaplerRequest;
                                 import org.kohsuke.stapler.StaplerResponse;
+                                import org.acegisecurity.Authentication;
+                                import org.acegisecurity.GrantedAuthority;
+                                import org.acegisecurity.GrantedAuthorityImpl;
+                                import org.acegisecurity.providers.AbstractAuthenticationToken;
+                                import org.acegisecurity.context.SecurityContextHolder;
+                                import org.acegisecurity.AuthenticationException;
+                                import org.acegisecurity.AuthenticationManager;
+                                import org.acegisecurity.BadCredentialsException;
+                                import org.acegisecurity.userdetails.UserDetails;
+                                import org.acegisecurity.userdetails.UserDetailsService;
+                                import org.acegisecurity.userdetails.UsernameNotFoundException;
+                                import jenkins.model.Jenkins;
+                                import jenkins.security.SecurityListener;
+                                import hudson.security.SecurityRealm;
+                                import hudson.util.IOException2;
+                                import java.io.File;
+                                import java.io.IOException;
 
-                                public class Foo {
+                                public class Foo extends SecurityRealm {
+                                    @Override
+                                    public UserDetails loadUserByUsername(String username) {
+                                       return null;
+                                    }
+                                    @Override
+                                    public SecurityComponents createSecurityComponents() {
+                                       new UserDetailsService() {
+                                          public UserDetails loadUserByUsername(String username) {
+                                             return null;
+                                          }
+                                       };
+                                    }
                                     public void foo() {
                                         StaplerRequest req = Stapler.getCurrentRequest();
                                         StaplerResponse response = Stapler.getCurrentResponse();
+                                        Authentication auth = Jenkins.getAuthentication();
+                                    }
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException2 e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException2 {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException2("Failed to parse file: " + file.getName(), e);
+                                        }
                                     }
                                 }
                                 """,
@@ -1865,11 +2188,57 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 import org.kohsuke.stapler.Stapler;
                                 import org.kohsuke.stapler.StaplerRequest2;
                                 import org.kohsuke.stapler.StaplerResponse2;
+                                import org.springframework.security.core.Authentication;
+                                import org.springframework.security.core.GrantedAuthority;
+                                import org.springframework.security.core.context.SecurityContextHolder;
+                                import org.springframework.security.core.AuthenticationException;
+                                import org.springframework.security.core.userdetails.UserDetails;
+                                import org.springframework.security.core.userdetails.UserDetailsService;
+                                import org.springframework.security.core.userdetails.UsernameNotFoundException;
+                                import jenkins.model.Jenkins;
+                                import jenkins.security.SecurityListener;
+                                import hudson.security.SecurityRealm;
+                                import java.io.File;
+                                import java.io.IOException;
+                                import org.springframework.security.core.authority.SimpleGrantedAuthority;
+                                import org.springframework.security.authentication.AbstractAuthenticationToken;
+                                import java.util.List;
+                                import java.util.Collection;
+                                import org.springframework.security.authentication.AuthenticationManager;
+                                import org.springframework.security.authentication.BadCredentialsException;
 
-                                public class Foo {
+                                public class Foo extends SecurityRealm {
+                                    @Override
+                                    public UserDetails loadUserByUsername2(String username) {
+                                       return null;
+                                    }
+                                    @Override
+                                    public SecurityComponents createSecurityComponents() {
+                                       new UserDetailsService() {
+                                          public UserDetails loadUserByUsername(String username) {
+                                             return null;
+                                          }
+                                       };
+                                    }
                                     public void foo() {
                                         StaplerRequest2 req = Stapler.getCurrentRequest2();
                                         StaplerResponse2 response = Stapler.getCurrentResponse2();
+                                        Authentication auth = Jenkins.getAuthentication2();
+                                    }
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException("Failed to parse file: " + file.getName(), e);
+                                        }
                                     }
                                 }
                                 """)));
@@ -1944,6 +2313,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 <artifactId>jenkins-test-harness</artifactId>
                                 <version>2.41.1</version>
                               </dependency>
+                              <dependency>
+                                <groupId>com.github.tomakehurst</groupId>
+                                <artifactId>wiremock</artifactId>
+                                <version>3.0.1</version>
+                                <scope>test</scope>
+                              </dependency>
                             </dependencies>
                           <repositories>
                             <repository>
@@ -1977,8 +2352,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                           <properties>
                             <jenkins-test-harness.version>%s</jenkins-test-harness.version>
                             <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-                            <jenkins.baseline>2.479</jenkins.baseline>
-                            <jenkins.version>${jenkins.baseline}.1</jenkins.version>
+                            <jenkins.baseline>2.492</jenkins.baseline>
+                            <jenkins.version>${jenkins.baseline}.3</jenkins.version>
                           </properties>
                           <dependencyManagement>
                             <dependencies>
@@ -1995,6 +2370,12 @@ public class DeclarativeRecipesTest implements RewriteTest {
                               <dependency>
                                 <groupId>org.jenkins-ci.main</groupId>
                                 <artifactId>jenkins-test-harness</artifactId>
+                              </dependency>
+                              <dependency>
+                                <groupId>org.wiremock</groupId>
+                                <artifactId>wiremock</artifactId>
+                                <version>%s</version>
+                                <scope>test</scope>
                               </dependency>
                             </dependencies>
                           <repositories>
@@ -2014,9 +2395,11 @@ public class DeclarativeRecipesTest implements RewriteTest {
                                 .formatted(
                                         Settings.getJenkinsParentVersion(),
                                         Settings.getJenkinsTestHarnessVersion(),
-                                        Settings.getBomVersion())),
+                                        Settings.getBomVersion(),
+                                        Settings.getWiremockVersion())),
                 srcTestJava(
                         java(
+                                // language=java
                                 """
                         package hudson.util;
                         public class ChartUtil {}
@@ -2026,18 +2409,72 @@ public class DeclarativeRecipesTest implements RewriteTest {
                         java(
                                 """
                                 import javax.servlet.ServletException;
+                                import com.gargoylesoftware.htmlunit.HttpMethod;
+                                import com.gargoylesoftware.htmlunit.WebRequest;
+                                import com.gargoylesoftware.htmlunit.html.HtmlPage;
                                 import org.kohsuke.stapler.Stapler;
                                 import org.kohsuke.stapler.StaplerRequest;
                                 import org.kohsuke.stapler.StaplerResponse;
                                 import hudson.util.ChartUtil;
+                                import hudson.util.IOException2;
+                                import java.io.File;
+                                import java.io.IOException;
 
                                 public class Foo {
                                     public void foo() {
                                         StaplerRequest req = Stapler.getCurrentRequest();
                                         StaplerResponse response = Stapler.getCurrentResponse();
                                     }
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException2 e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException2 {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException2("Failed to parse file: " + file.getName(), e);
+                                        }
+                                    }
                                 }
-                                """)));
+                                """,
+                                """
+                                import javax.servlet.ServletException;
+                                import org.htmlunit.HttpMethod;
+                                import org.htmlunit.WebRequest;
+                                import org.htmlunit.html.HtmlPage;
+                                import org.kohsuke.stapler.Stapler;
+                                import org.kohsuke.stapler.StaplerRequest;
+                                import org.kohsuke.stapler.StaplerResponse;
+                                import hudson.util.ChartUtil;
+                                import java.io.File;
+                                import java.io.IOException;
+
+                                public class Foo {
+                                    public void foo() {
+                                        StaplerRequest req = Stapler.getCurrentRequest();
+                                        StaplerResponse response = Stapler.getCurrentResponse();
+                                    }
+                                    public static void main(String[] args) {
+                                        try {
+                                            parseFile(new File("invalid.xml"));
+                                        } catch (IOException e) {
+                                            System.out.println("Caught custom exception: " + e.getMessage());
+                                            e.printStackTrace();
+                                        }
+                                    }
+                                    private static void parseFile(File file) throws IOException {
+                                        try {
+                                            throw new IOException("Unable to read file");
+                                        } catch (IOException e) {
+                                            throw new IOException("Failed to parse file: " + file.getName(), e);
+                                        }
+                                    }
+                                }""")));
     }
 
     @Test
@@ -2135,8 +2572,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                   <properties>
                     <jenkins-test-harness.version>%s</jenkins-test-harness.version>
                     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
-                    <jenkins.baseline>2.479</jenkins.baseline>
-                    <jenkins.version>${jenkins.baseline}.1</jenkins.version>
+                    <jenkins.baseline>2.492</jenkins.baseline>
+                    <jenkins.version>${jenkins.baseline}.3</jenkins.version>
                   </properties>
                   <dependencyManagement>
                     <dependencies>
@@ -2789,7 +3226,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                     <dependency>
                       <groupId>io.jenkins.plugins</groupId>
                       <artifactId>asm-api</artifactId>
-                      <version>9.7.1-97.v4cc844130d97</version>
+                      <version>%s</version>
                     </dependency>
                   </dependencies>
                   <repositories>
@@ -2805,7 +3242,8 @@ public class DeclarativeRecipesTest implements RewriteTest {
                     </pluginRepository>
                   </pluginRepositories>
                 </project>
-                """));
+                """
+                                .formatted(Settings.getPluginVersion("asm-api"))));
     }
 
     @Test
@@ -2822,7 +3260,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                   <parent>
                     <groupId>org.jenkins-ci.plugins</groupId>
                     <artifactId>plugin</artifactId>
-                    <version>4.88</version>
+                    <version>5.13</version>
                     <relativePath />
                   </parent>
                   <groupId>io.jenkins.plugins</groupId>
@@ -2831,7 +3269,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                   <packaging>hpi</packaging>
                   <name>Empty Plugin</name>
                   <properties>
-                    <jenkins.version>2.489</jenkins.version>
+                    <jenkins.version>2.492.1</jenkins.version>
                   </properties>
                   <dependencies>
                     <dependency>
@@ -2866,7 +3304,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                   <parent>
                     <groupId>org.jenkins-ci.plugins</groupId>
                     <artifactId>plugin</artifactId>
-                    <version>4.88</version>
+                    <version>5.13</version>
                     <relativePath />
                   </parent>
                   <groupId>io.jenkins.plugins</groupId>
@@ -2875,7 +3313,7 @@ public class DeclarativeRecipesTest implements RewriteTest {
                   <packaging>hpi</packaging>
                   <name>Empty Plugin</name>
                   <properties>
-                    <jenkins.version>2.489</jenkins.version>
+                    <jenkins.version>2.492.1</jenkins.version>
                   </properties>
                   <dependencies>
                     <dependency>
@@ -2899,6 +3337,188 @@ public class DeclarativeRecipesTest implements RewriteTest {
                 </project>
                 """
                                 .formatted(Settings.getPluginVersion("commons-compress-api"))));
+    }
+
+    @Test
+    void migrateToJUnit5() {
+        rewriteRun(
+                spec -> {
+                    var parser = JavaParser.fromJavaVersion().logCompilationWarningsAndErrors(true);
+                    collectRewriteTestDependencies().forEach(parser::addClasspathEntry);
+                    spec.recipeFromResource(
+                                    "/META-INF/rewrite/recipes.yml",
+                                    "io.jenkins.tools.pluginmodernizer.MigrateToJUnit5")
+                            .parser(parser)
+                            .expectedCyclesThatMakeChanges(1)
+                            .cycles(1);
+                },
+                // language=java
+                java(
+                        """
+                import org.junit.Before;
+                import org.junit.After;
+                import org.junit.Test;
+                import org.junit.Rule;
+                import org.jvnet.hudson.test.JenkinsRule;
+                import org.junit.Ignore;
+                import org.junit.Assert;
+                import org.hamcrest.Matchers;
+                import org.junit.rules.TemporaryFolder;
+                import java.io.File;
+
+                class MyTest {
+                    @Rule
+                    public JenkinsRule j = new JenkinsRule();
+                    private TemporaryFolder tempFolder;
+
+                    @Test
+                    public void useJenkinsRule(String str) {
+                        j.before();
+                    }
+
+                    @Before
+                    public void setUp() throws Exception {
+                        tempFolder = new TemporaryFolder();
+                        tempFolder.create();
+                    }
+
+                    @After
+                    public void tearDown() {
+                        tempFolder.delete();
+                    }
+
+                    @Test
+                    public void testSomething() throws Exception {
+                        File tempFile = tempFolder.newFile("test.txt");
+                        Assert.assertTrue("File should exist", tempFile.exists());
+                        Assert.assertEquals(0, tempFile.length());
+                    }
+
+                    @Test
+                    public void testInstanceOf() {
+                        Object obj = new String();
+                        Assert.assertTrue(obj instanceof java.lang.String);
+                    }
+
+                    @Test(expected = IllegalArgumentException.class)
+                    public void testException() {
+                        throw new IllegalArgumentException("Expected");
+                    }
+
+                    @Test
+                    public void testNoException() {
+                        try {
+                            //someMethodThatShouldNotThrow();
+                        } catch (Exception e) {
+                            Assert.fail("Should not throw exception");
+                        }
+                    }
+
+                    @Test
+                    public void testEquality() {
+                        String actual = "hello";
+                        String expected = "hello";
+                        Assert.assertThat(actual, Matchers.equalTo(expected));
+                    }
+
+                    @Ignore
+                    @Test
+                    public void ignoredTest() {
+                        Assert.fail("This should not run");
+                    }
+                }
+                public class MyTestChild extends MyTest {
+                    @Test
+                    public void myTestMethodChild() {
+                        j.before();
+                    }
+                }
+                """,
+                        """
+                import org.junit.jupiter.api.*;
+                import org.jvnet.hudson.test.JenkinsRule;
+                import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
+                import org.hamcrest.Matchers;
+                import java.io.File;
+                import java.io.IOException;
+                import java.nio.file.Files;
+
+                import static org.hamcrest.MatcherAssert.assertThat;
+                import static org.junit.jupiter.api.Assertions.*;
+
+                @WithJenkins
+                class MyTest {
+                    private File tempFolder;
+
+                    @Test
+                    public void useJenkinsRule(String str, JenkinsRule j) {
+                        j.before();
+                    }
+
+                    @BeforeEach
+                    void setUp() throws Exception {
+                        tempFolder = Files.createTempDirectory("junit").toFile();
+                    }
+
+                    @AfterEach
+                    void tearDown() {
+                        tempFolder.delete();
+                    }
+
+                    @Test
+                    void testSomething() throws Exception {
+                        File tempFile = newFile(tempFolder, "test.txt");
+                        assertTrue(tempFile.exists(), "File should exist");
+                        assertEquals(0, tempFile.length());
+                    }
+
+                    @Test
+                    void testInstanceOf() {
+                        Object obj = new String();
+                        assertInstanceOf(java.lang.String.class, obj);
+                    }
+
+                    @Test
+                    void testException()throws Exception {
+                        assertThrows(IllegalArgumentException.class, () -> {
+                            throw new IllegalArgumentException("Expected");
+                        });
+                    }
+
+                    @Test
+                    void testNoException() {
+                        assertDoesNotThrow(() -> {
+                            //someMethodThatShouldNotThrow();
+                        }, "Should not throw exception");
+                    }
+
+                    @Test
+                    void testEquality() {
+                        String actual = "hello";
+                        String expected = "hello";
+                        assertThat(actual, Matchers.equalTo(expected));
+                    }
+
+                    @Disabled
+                    @Test
+                    void ignoredTest() {
+                        fail("This should not run");
+                    }
+
+                    private static File newFile(File parent, String child) throws IOException {
+                        File result = new File(parent, child);
+                        result.createNewFile();
+                        return result;
+                    }
+                }
+
+                class MyTestChild extends MyTest {
+                    @Test
+                    public void myTestMethodChild(JenkinsRule j) {
+                        j.before();
+                    }
+                }
+                """));
     }
 
     @Test

@@ -193,6 +193,10 @@ public class Settings {
         return readProperty("bom.version", "versions.properties");
     }
 
+    public static String getRecommendedBomVersion() {
+        return readProperty("bom.recommended.version", "versions.properties");
+    }
+
     /**
      * Return a plugin version from versions.properties
      * @param plugin The plugin name (for example commons-compress-api)
@@ -216,6 +220,14 @@ public class Settings {
      */
     public static String getJenkinsTestHarnessVersion() {
         return readProperty("jenkins-test-harness.version", "versions.properties");
+    }
+
+    /**
+     * Return the Wiremock version
+     * @return The Wiremock version
+     */
+    public static String getWiremockVersion() {
+        return readProperty("wiremock.version", "versions.properties");
     }
 
     public static String getJenkinsMinimumBaseline() {
