@@ -405,6 +405,9 @@ public class GHServiceTest {
         doReturn(builder).when(repository).createFork();
         doReturn(fork).when(builder).create();
 
+        // Directory doesn't exists
+        doReturn(Path.of("not-existing-dir")).when(plugin).getLocalMetadataRepository();
+
         // Not yet forked
         doReturn(null).when(myself).getRepository(eq("metadata-plugin-modernizer"));
 
@@ -462,6 +465,9 @@ public class GHServiceTest {
         doReturn(Mockito.mock(URL.class)).when(fork).getHtmlUrl();
         doReturn(repository).when(plugin).getRemoteMetadataRepository(eq(service));
         doReturn(myself).when(github).getMyself();
+
+        // Directory doesn't exists
+        doReturn(Path.of("not-existing-dir")).when(plugin).getLocalMetadataRepository();
 
         // Already forked
         doReturn(fork).when(myself).getRepository(eq("metadata-plugin-modernizer"));
@@ -571,6 +577,9 @@ public class GHServiceTest {
         doReturn(builder).when(builder).organization(eq(org));
         doReturn(fork).when(builder).create();
 
+        // Directory doesn't exists
+        doReturn(Path.of("not-existing-dir")).when(plugin).getLocalMetadataRepository();
+
         // Not yet forked
         doReturn(null).when(org).getRepository(eq("metadata-plugin-modernizer"));
 
@@ -624,6 +633,9 @@ public class GHServiceTest {
         doReturn(Mockito.mock(URL.class)).when(fork).getHtmlUrl();
         doReturn(repository).when(plugin).getRemoteMetadataRepository(eq(service));
         doReturn(org).when(github).getOrganization("fake-owner");
+
+        // Directory doesn't exists
+        doReturn(Path.of("not-existing-dir")).when(plugin).getLocalMetadataRepository();
 
         // Already forked to org
         doReturn(fork).when(org).getRepository(eq("metadata-plugin-modernizer"));
@@ -1106,6 +1118,8 @@ public class GHServiceTest {
                 .when(repository)
                 .createPullRequest(anyString(), anyString(), isNull(), anyString(), eq(true), eq(false));
 
+        doReturn(new URL("https://github.com/owner/repo/pull/123")).when(pr).getHtmlUrl();
+
         // Test
         service.openPullRequest(plugin);
 
@@ -1137,6 +1151,7 @@ public class GHServiceTest {
         doReturn(prQueryList).when(prQuery).list();
 
         doReturn(pr).when(repository).createPullRequest(anyString(), anyString(), isNull(), anyString(), eq(true));
+        doReturn(new URL("https://github.com/owner/repo/pull/123")).when(pr).getHtmlUrl();
 
         // Test
         service.openMetadataPullRequest(plugin);
@@ -1174,6 +1189,10 @@ public class GHServiceTest {
         doReturn(prQuery).when(prQuery).state(eq(GHIssueState.OPEN));
         doReturn(prQueryList).when(prQuery).list();
         doReturn(List.of(existingPr, toDeletePr)).when(prQueryList).toList();
+
+        doReturn(new URL("https://github.com/owner/repo/pull/123"))
+                .when(existingPr)
+                .getHtmlUrl();
 
         // Test
         service.openPullRequest(plugin);
@@ -1216,6 +1235,10 @@ public class GHServiceTest {
         doReturn(prQueryList).when(prQuery).list();
         doReturn(List.of(existingPr, toDeletePr)).when(prQueryList).toList();
 
+        doReturn(new URL("https://github.com/owner/repo/pull/123"))
+                .when(existingPr)
+                .getHtmlUrl();
+
         // Test
         service.openMetadataPullRequest(plugin);
 
@@ -1254,6 +1277,8 @@ public class GHServiceTest {
         doReturn(pr)
                 .when(repository)
                 .createPullRequest(anyString(), anyString(), isNull(), anyString(), eq(true), eq(true));
+
+        doReturn(new URL("https://github.com/owner/repo/pull/123")).when(pr).getHtmlUrl();
 
         // Test
         service.openPullRequest(plugin);
