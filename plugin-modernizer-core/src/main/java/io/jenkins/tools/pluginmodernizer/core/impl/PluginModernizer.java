@@ -189,7 +189,7 @@ public class PluginModernizer {
             LOG.debug("Plugin {} health score: {}", plugin.getName(), pluginService.extractScore(plugin));
             LOG.debug("Plugin {} installations: {}", plugin.getName(), pluginService.extractInstallationStats(plugin));
             LOG.debug("Is API plugin {} : {}", plugin.getName(), plugin.isApiPlugin(pluginService));
-            if (plugin.isDeprecated(pluginService)) {
+            if (plugin.isDeprecated(pluginService) && !config.isAllowDeprecatedPlugins()) {
                 LOG.info("Plugin {} is deprecated. Skipping.", plugin.getName());
                 plugin.addError("Plugin is deprecated");
                 return;
