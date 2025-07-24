@@ -37,6 +37,14 @@ public class Recipe implements Comparable<Recipe> {
         return tags != null && tags.contains("skip-verification");
     }
 
+    /**
+     * Return true if this recipe requires compilation/verification.
+     * If the "no-compile" tag is present, compilation is not required.
+     */
+    public boolean requiresCompilation() {
+        return tags == null || !tags.contains("no-compile");
+    }
+
     @JsonIgnore
     private Object type;
 
