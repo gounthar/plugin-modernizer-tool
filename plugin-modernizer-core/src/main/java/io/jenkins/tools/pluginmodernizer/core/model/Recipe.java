@@ -38,10 +38,10 @@ public class Recipe implements Comparable<Recipe> {
     }
 
     /**
-     * Return true if this recipe requires compilation/verification.
-     * If the "no-compile" tag is present, compilation is not required.
+     * Return true if this recipe requires compilation and verification steps.
+     * If the "no-compile" tag is present, compilation and verification are not required.
      */
-    public boolean requiresCompilation() {
+    public boolean requiresBuild() {
         return tags == null || !tags.contains("no-compile");
     }
 
