@@ -1,29 +1,30 @@
 package io.jenkins.tools.pluginmodernizer.core.model;
 
-import org.junit.jupiter.api.Test;
-import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
+
+import java.util.Set;
+import org.junit.jupiter.api.Test;
 
 public class RecipeTest {
 
     @Test
-    public void testRequiresCompilationWithNoTags() {
+    public void testRequiresBuildWithNoTags() {
         Recipe recipe = new Recipe();
         recipe.setTags(null);
-        assertTrue(recipe.requiresCompilation(), "Should require compilation if tags are null");
+        assertTrue(recipe.requiresBuild(), "Should require build if tags are null");
     }
 
     @Test
-    public void testRequiresCompilationWithNoCompileTag() {
+    public void testRequiresBuildWithNoCompileTag() {
         Recipe recipe = new Recipe();
         recipe.setTags(Set.of("no-compile"));
-        assertFalse(recipe.requiresCompilation(), "Should not require compilation if 'no-compile' tag is present");
+        assertFalse(recipe.requiresBuild(), "Should not require build if 'no-compile' tag is present");
     }
 
     @Test
-    public void testRequiresCompilationWithOtherTags() {
+    public void testRequiresBuildWithOtherTags() {
         Recipe recipe = new Recipe();
         recipe.setTags(Set.of("foo", "bar"));
-        assertTrue(recipe.requiresCompilation(), "Should require compilation if 'no-compile' tag is absent");
+        assertTrue(recipe.requiresBuild(), "Should require build if 'no-compile' tag is absent");
     }
 }
