@@ -614,7 +614,7 @@ public class PluginModernizer {
 
     private boolean requiresProcessing(Config config) {
         return !config.isNoCompile()
-                && config.getRecipe().requiresCompilation()
+                && config.getRecipe().requiresBuild()
                 && !config.isFetchMetadataOnly()
                 && !config.isSkipVerification();
     }
