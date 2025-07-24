@@ -26,7 +26,7 @@ public class PluginModernizer {
     private static final Logger LOG = LoggerFactory.getLogger(PluginModernizer.class);
 
     @Inject
-    private Config config;
+    Config config;
 
     @Inject
     private MavenInvoker mavenInvoker;
@@ -176,7 +176,7 @@ public class PluginModernizer {
      * Process a plugin
      * @param plugin The plugin to process
      */
-    private void process(Plugin plugin) {
+    void process(Plugin plugin) {
         try {
 
             // Set config
@@ -525,7 +525,7 @@ public class PluginModernizer {
      * Compile a plugin
      * @param plugin The plugin to compile
      */
-    private JDK compilePlugin(Plugin plugin) {
+    JDK compilePlugin(Plugin plugin) {
         PluginMetadata metadata = plugin.getMetadata();
         JDK jdk = JDK.min(metadata.getJdks(), metadata.getJenkinsVersion());
         plugin.withJDK(jdk);
@@ -539,7 +539,7 @@ public class PluginModernizer {
      * @param plugin The plugin to verify
      * @return The JDK that verifies the plugin
      */
-    private JDK verifyPlugin(Plugin plugin) {
+    JDK verifyPlugin(Plugin plugin) {
         PluginMetadata metadata = plugin.getMetadata();
 
         // Determine the JDK
