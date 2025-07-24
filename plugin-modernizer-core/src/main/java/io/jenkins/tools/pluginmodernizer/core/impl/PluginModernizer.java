@@ -223,7 +223,10 @@ public class PluginModernizer {
 
             // Compile only if we are able to find metadata
             // For the moment it's local cache only but later will fetch on remote storage
-            if (!config.isNoCompile() && config.getRecipe().requiresCompilation() && !config.isFetchMetadataOnly() && !config.isSkipVerification()) {
+            if (!config.isNoCompile()
+                    && config.getRecipe().requiresCompilation()
+                    && !config.isFetchMetadataOnly()
+                    && !config.isSkipVerification()) {
                 if (plugin.getMetadata() != null && !plugin.hasPreconditionErrors()) {
                     JDK jdk = compilePlugin(plugin);
                     LOG.debug("Plugin {} compiled successfully with JDK {}", plugin.getName(), jdk.getMajor());
@@ -334,7 +337,10 @@ public class PluginModernizer {
             }
 
             // Verify plugin
-            if (!config.isNoCompile() && config.getRecipe().requiresCompilation() && !config.isFetchMetadataOnly() && !config.isSkipVerification()) {
+            if (!config.isNoCompile()
+                    && config.getRecipe().requiresCompilation()
+                    && !config.isFetchMetadataOnly()
+                    && !config.isSkipVerification()) {
                 JDK jdk = verifyPlugin(plugin);
                 LOG.info("Plugin {} verified successfully with JDK {}", plugin.getName(), jdk.getMajor());
             }
