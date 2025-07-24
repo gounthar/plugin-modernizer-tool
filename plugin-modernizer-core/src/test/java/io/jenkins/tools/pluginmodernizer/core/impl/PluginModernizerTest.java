@@ -1,23 +1,21 @@
 package io.jenkins.tools.pluginmodernizer.core.impl;
 
+import static org.mockito.Mockito.*;
+
 import io.jenkins.tools.pluginmodernizer.core.config.Config;
 import io.jenkins.tools.pluginmodernizer.core.model.Plugin;
 import io.jenkins.tools.pluginmodernizer.core.model.Recipe;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-
-import java.util.List;
-import java.util.Set;
-
-import static org.mockito.Mockito.*;
 
 public class PluginModernizerTest {
 
     @Test
     public void testNoCompileSkipsCompilationAndVerification() {
-        // Mock Recipe with requiresCompilation = false
+        // Mock Recipe with requiresBuild = false
         Recipe recipe = mock(Recipe.class);
-        when(recipe.requiresCompilation()).thenReturn(false);
+        when(recipe.requiresBuild()).thenReturn(false);
         when(recipe.getName()).thenReturn("test-recipe");
 
         // Mock Config with noCompile = true
