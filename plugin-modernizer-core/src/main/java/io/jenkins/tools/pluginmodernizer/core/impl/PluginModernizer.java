@@ -26,7 +26,7 @@ public class PluginModernizer {
     private static final Logger LOG = LoggerFactory.getLogger(PluginModernizer.class);
 
     @Inject
-    private Config config;
+    Config config;
 
     @Inject
     private MavenInvoker mavenInvoker;
@@ -176,7 +176,7 @@ public class PluginModernizer {
      * Process a plugin
      * @param plugin The plugin to process
      */
-    private void process(Plugin plugin) {
+    void process(Plugin plugin) {
         try {
 
             // Set config
@@ -223,7 +223,7 @@ public class PluginModernizer {
 
             // Compile only if we are able to find metadata
             // For the moment it's local cache only but later will fetch on remote storage
-            if (!config.isFetchMetadataOnly() && !config.isSkipVerification()) {
+            if (requiresProcessing(config)) {
                 if (plugin.getMetadata() != null && !plugin.hasPreconditionErrors()) {
                     JDK jdk = compilePlugin(plugin);
                     LOG.debug("Plugin {} compiled successfully with JDK {}", plugin.getName(), jdk.getMajor());
@@ -334,7 +334,7 @@ public class PluginModernizer {
             }
 
             // Verify plugin
-            if (!config.isFetchMetadataOnly() && !config.isSkipVerification()) {
+            if (requiresProcessing(config)) {
                 JDK jdk = verifyPlugin(plugin);
                 LOG.info("Plugin {} verified successfully with JDK {}", plugin.getName(), jdk.getMajor());
             }
@@ -519,7 +519,7 @@ public class PluginModernizer {
      * Compile a plugin
      * @param plugin The plugin to compile
      */
-    private JDK compilePlugin(Plugin plugin) {
+    JDK compilePlugin(Plugin plugin) {
         PluginMetadata metadata = plugin.getMetadata();
         JDK jdk = JDK.min(metadata.getJdks(), metadata.getJenkinsVersion());
         plugin.withJDK(jdk);
@@ -533,7 +533,7 @@ public class PluginModernizer {
      * @param plugin The plugin to verify
      * @return The JDK that verifies the plugin
      */
-    private JDK verifyPlugin(Plugin plugin) {
+    JDK verifyPlugin(Plugin plugin) {
         PluginMetadata metadata = plugin.getMetadata();
 
         // Determine the JDK
@@ -610,6 +610,13 @@ public class PluginModernizer {
             }
             LOG.info("*************");
         }
+    }
+
+    private boolean requiresProcessing(Config config) {
+        return !config.isNoCompile()
+                && config.getRecipe().requiresBuild()
+                && !config.isFetchMetadataOnly()
+                && !config.isSkipVerification();
     }
 
     private void printModifiedFiles(Plugin plugin) {

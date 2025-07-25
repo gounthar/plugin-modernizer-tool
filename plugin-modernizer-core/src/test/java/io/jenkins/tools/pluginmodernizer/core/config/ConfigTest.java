@@ -112,4 +112,13 @@ public class ConfigTest {
 
         assertTrue(config.isDryRun());
     }
+
+    @Test
+    public void testConfigBuilderWithNoCompile() {
+        Config config = Config.builder().withNoCompile(true).build();
+        assertTrue(config.isNoCompile(), "noCompile should be true when set via builder");
+
+        Config config2 = Config.builder().withNoCompile(false).build();
+        assertFalse(config2.isNoCompile(), "noCompile should be false when not set");
+    }
 }
