@@ -391,8 +391,8 @@
               <configuration>
                 <rules>
                   <requireJavaVersion>
-                    <version>17,21</version>
-                    <message>Project requires Java 17 or Java 21</message>
+                    <version>17,21,25</version>
+                    <message>Project requires Java 17, 21, or 25</message>
                   </requireJavaVersion>
                 </rules>
               </configuration>
