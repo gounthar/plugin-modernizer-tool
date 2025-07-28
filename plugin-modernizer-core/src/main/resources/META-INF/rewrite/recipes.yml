@@ -294,7 +294,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: json-api
-      pluginVersion: 20250517-153.vc8a_a_d87c0ce3
+      pluginVersion: 20250517-163.v1c5da_e99c775
       replaces:
         - groupId: org.json
           artifactId: json
@@ -310,7 +310,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: json-path-api
-      pluginVersion: 2.9.0-148.v22a_7ffe323ce
+      pluginVersion: 2.9.0-178.vca_b_c71881321
       replaces:
         - groupId: com.jayway.jsonpath
           artifactId: json-path
@@ -326,7 +326,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: asm-api
-      pluginVersion: 9.8-135.vb_2239d08ee90
+      pluginVersion: 9.8-163.vb_2a_96d3f9c3c
       replaces:
         - groupId: org.ow2.asm
           artifactId: asm
@@ -350,7 +350,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: joda-time-api
-      pluginVersion: 2.14.0-127.v7d9da_295a_d51
+      pluginVersion: 2.14.0-149.v1c3ce991d1b_9
       replaces:
         - groupId: joda-time
           artifactId: joda-time
@@ -366,7 +366,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: gson-api
-      pluginVersion: 2.13.1-139.v4569c2ef303f
+      pluginVersion: 2.13.1-153.vb_3d0c48a_a_b_4a_
       replaces:
         - groupId: com.google.code.gson
           artifactId: gson
@@ -382,7 +382,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: org.jenkins-ci.plugins
       pluginArtifactId: jsoup
-      pluginVersion: 1.21.1-52.v96e4041b_60fd
+      pluginVersion: 1.21.1-58.vfc578e6e2610
       replaces:
         - groupId: org.jsoup
           artifactId: jsoup
@@ -433,7 +433,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: byte-buddy-api
-      pluginVersion: 1.17.6-165.vcd5ee8d19447
+      pluginVersion: 1.17.6-171.ve8cb_b_432ea_b_f
       replaces:
         - groupId: net.bytebuddy
           artifactId: byte-buddy
