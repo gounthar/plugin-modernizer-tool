@@ -163,15 +163,18 @@ public class UpdateJenkinsfileForJava25 extends Recipe {
                                 key = keyValue.toString();
                             }
                         }
-                        if ("platform".equals(key) && entry.getValue() instanceof J.Literal) {
-                            assert ((J.Literal) entry.getValue()).getValue() != null;
-                            platform = ((J.Literal) entry.getValue()).getValue().toString();
-                        } else if ("jdk".equals(key) && entry.getValue() instanceof J.Literal) {
-                            Object jdkValue = ((J.Literal) entry.getValue()).getValue();
-                            if (jdkValue instanceof Number) {
-                                jdk = ((Number) jdkValue).intValue();
-                            }
-                        }
+if ("platform".equals(key) && entry.getValue() instanceof J.Literal) {
+    Object platformValue = ((J.Literal) entry.getValue()).getValue();
+    if (platformValue == null) {
+        throw new NullPointerException("'platform' value in configuration map entry is null");
+    }
+    platform = platformValue.toString();
+} else if ("jdk".equals(key) && entry.getValue() instanceof J.Literal) {
+    Object jdkValue = ((J.Literal) entry.getValue()).getValue();
+    if (jdkValue instanceof Number) {
+        jdk = ((Number) jdkValue).intValue();
+    }
+}
                     }
                     if (platform != null && jdk != null) {
                         configs.add(PlatformConfig.build(Platform.fromPlatform(platform), JDK.get(jdk)));
