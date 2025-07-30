@@ -116,14 +116,14 @@ public class UpdateJenkinsfileForJava25 extends Recipe {
                                 }
                             }
                             break;
-                        case "forkCount":
-                            if (entry.getValue() instanceof J.Literal) {
-                                assert ((J.Literal) entry.getValue()).getValue() != null;
-                                this.forkCount = ((J.Literal) entry.getValue())
-                                        .getValue()
-                                        .toString();
-                            }
-                            break;
+case "forkCount":
+    if (entry.getValue() instanceof J.Literal) {
+        Object value = ((J.Literal) entry.getValue()).getValue();
+        if (value != null) {
+            this.forkCount = value.toString();
+        }
+    }
+    break;
                         default:
                             LOG.warn("Unknown argument in buildPlugin: {}", key);
                             break;
