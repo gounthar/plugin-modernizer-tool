@@ -189,7 +189,7 @@ public class AnnotateWithJenkins extends ScanningRecipe<Map<String, String>> {
         private J.MethodDeclaration addJenkinsRuleParameter(J.MethodDeclaration methodDecl, String jenkinsRuleFieldName) {
             boolean emptyParams = methodDecl.getParameters().stream()
                     .anyMatch(param -> param instanceof J.Empty);
-            ArrayList<J> params = new ArrayList<>();
+            ArrayList<Statement> params = new ArrayList<>();
             if (!emptyParams) {
                 params.addAll(methodDecl.getParameters());
             }
@@ -226,7 +226,8 @@ public class AnnotateWithJenkins extends ScanningRecipe<Map<String, String>> {
                                     null,
                                     null),
                             Space.EMPTY,
-                            Markers.EMPTY))));
+                            Markers.EMPTY))
+            ));
             return methodDecl.withParameters(params);
         }
 
