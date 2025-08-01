@@ -27,4 +27,11 @@ public class RecipeTest {
         recipe.setTags(Set.of("foo", "bar"));
         assertTrue(recipe.requiresBuild(), "Should require build if 'no-compile' tag is absent");
     }
+
+    @Test
+    public void testRequiresBuildWithEmptyTags() {
+        Recipe recipe = new Recipe();
+        recipe.setTags(Set.of());
+        assertTrue(recipe.requiresBuild(), "Should require build if tags are empty");
+    }
 }
