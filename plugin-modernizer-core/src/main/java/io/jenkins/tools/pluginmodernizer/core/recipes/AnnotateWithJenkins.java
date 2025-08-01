@@ -119,23 +119,21 @@ public class AnnotateWithJenkins extends ScanningRecipe<Map<String, String>> {
 
                     maybeAddImport("org.jvnet.hudson.test.junit.jupiter.WithJenkins");
 
-                    classDecl = classDecl.withLeadingAnnotations(new ArrayList<>(classDecl.getLeadingAnnotations()) {
-                        {
-                            add(new J.Annotation(
-                                    UUID.randomUUID(),
+                    ArrayList<J.Annotation> newAnnotations = new ArrayList<>(classDecl.getLeadingAnnotations());
+                    newAnnotations.add(new J.Annotation(
+                            UUID.randomUUID(),
+                            Space.EMPTY,
+                            Markers.EMPTY,
+                            new J.Identifier(
+                                    Tree.randomId(),
                                     Space.EMPTY,
                                     Markers.EMPTY,
-                                    new J.Identifier(
-                                            Tree.randomId(),
-                                            Space.EMPTY,
-                                            Markers.EMPTY,
-                                            Collections.emptyList(),
-                                            "WithJenkins\n",
-                                            JavaType.buildType("org.jvnet.hudson.test.junit.jupiter.WithJenkins"),
-                                            null),
-                                    null));
-                        }
-                    });
+                                    Collections.emptyList(),
+                                    "WithJenkins\n",
+                                    JavaType.buildType("org.jvnet.hudson.test.junit.jupiter.WithJenkins"),
+                                    null),
+                            null));
+                    classDecl = classDecl.withLeadingAnnotations(newAnnotations);
 
                     LOG.info("Annotated class with @WithJenkins: {}", classDecl.getSimpleName());
                 }
