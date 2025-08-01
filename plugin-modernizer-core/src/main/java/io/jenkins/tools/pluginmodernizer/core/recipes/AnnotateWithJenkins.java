@@ -1,6 +1,7 @@
 package io.jenkins.tools.pluginmodernizer.core.recipes;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -119,23 +120,21 @@ public class AnnotateWithJenkins extends ScanningRecipe<Map<String, String>> {
 
                     maybeAddImport("org.jvnet.hudson.test.junit.jupiter.WithJenkins");
 
-                    classDecl = classDecl.withLeadingAnnotations(new ArrayList<>(classDecl.getLeadingAnnotations()) {
-                        {
-                            add(new J.Annotation(
-                                    UUID.randomUUID(),
-                                    Space.EMPTY,
-                                    Markers.EMPTY,
-                                    new J.Identifier(
-                                            Tree.randomId(),
-                                            Space.EMPTY,
-                                            Markers.EMPTY,
-                                            Collections.emptyList(),
-                                            "WithJenkins\n",
-                                            JavaType.buildType("org.jvnet.hudson.test.junit.jupiter.WithJenkins"),
-                                            null),
-                                    null));
-                        }
-                    });
+List<J.Annotation> newAnnotations = new ArrayList<>(classDecl.getLeadingAnnotations());
+newAnnotations.add(new J.Annotation(
+        UUID.randomUUID(),
+        Space.EMPTY,
+        Markers.EMPTY,
+        new J.Identifier(
+                Tree.randomId(),
+                Space.EMPTY,
+                Markers.EMPTY,
+                Collections.emptyList(),
+                "WithJenkins\n",
+                JavaType.buildType("org.jvnet.hudson.test.junit.jupiter.WithJenkins"),
+                null),
+        null));
+classDecl = classDecl.withLeadingAnnotations(newAnnotations);
 
                     LOG.info("Annotated class with @WithJenkins: {}", classDecl.getSimpleName());
                 }
@@ -204,52 +203,50 @@ public class AnnotateWithJenkins extends ScanningRecipe<Map<String, String>> {
                                                 jenkinsRuleFieldName,
                                                 methodDecl.getSimpleName());
                                         J.MethodDeclaration finalMethodDecl = methodDecl;
-                                        methodDecl = methodDecl.withParameters(new ArrayList<>() {
-
-                                            {
-                                                boolean emptyParams = finalMethodDecl.getParameters().stream()
-                                                        .anyMatch(param -> param instanceof J.Empty);
-                                                if (!emptyParams) {
-                                                    addAll(finalMethodDecl.getParameters());
-                                                }
-
-                                                add(new J.VariableDeclarations(
-                                                        Tree.randomId(),
-                                                        emptyParams ? Space.EMPTY : Space.SINGLE_SPACE,
-                                                        Markers.EMPTY,
-                                                        Collections.emptyList(),
-                                                        Collections.emptyList(),
-                                                        new J.Identifier(
-                                                                Tree.randomId(),
-                                                                Space.EMPTY,
-                                                                Markers.EMPTY,
-                                                                Collections.emptyList(),
-                                                                "JenkinsRule",
-                                                                JavaType.buildType("org.jvnet.hudson.test.JenkinsRule"),
-                                                                null),
-                                                        null,
-                                                        Collections.emptyList(),
-                                                        Collections.singletonList(new JRightPadded<>(
-                                                                new J.VariableDeclarations.NamedVariable(
-                                                                        Tree.randomId(),
-                                                                        Space.SINGLE_SPACE,
-                                                                        Markers.EMPTY,
-                                                                        new J.Identifier(
-                                                                                Tree.randomId(),
-                                                                                Space.EMPTY,
-                                                                                Markers.EMPTY,
-                                                                                Collections.emptyList(),
-                                                                                jenkinsRuleFieldName,
-                                                                                JavaType.buildType(
-                                                                                        "org.jvnet.hudson.test.JenkinsRule"),
-                                                                                null),
-                                                                        Collections.emptyList(),
-                                                                        null,
-                                                                        null),
-                                                                Space.EMPTY,
-                                                                Markers.EMPTY))));
-                                            }
-                                        });
+List<org.openrewrite.java.tree.Statement> newParams = new ArrayList<>();
+boolean emptyParams = finalMethodDecl.getParameters().stream()
+        .anyMatch(param -> param instanceof J.Empty);
+if (!emptyParams) {
+    for (org.openrewrite.java.tree.Statement param : finalMethodDecl.getParameters()) {
+        newParams.add(param);
+    }
+}
+newParams.add(new J.VariableDeclarations(
+        Tree.randomId(),
+        emptyParams ? Space.EMPTY : Space.SINGLE_SPACE,
+        Markers.EMPTY,
+        Collections.emptyList(),
+        Collections.emptyList(),
+        new J.Identifier(
+                Tree.randomId(),
+                Space.EMPTY,
+                Markers.EMPTY,
+                Collections.emptyList(),
+                "JenkinsRule",
+                JavaType.buildType("org.jvnet.hudson.test.JenkinsRule"),
+                null),
+        null,
+        Collections.emptyList(),
+        Collections.singletonList(new JRightPadded<>(
+                new J.VariableDeclarations.NamedVariable(
+                        Tree.randomId(),
+                        Space.SINGLE_SPACE,
+                        Markers.EMPTY,
+                        new J.Identifier(
+                                Tree.randomId(),
+                                Space.EMPTY,
+                                Markers.EMPTY,
+                                Collections.emptyList(),
+                                jenkinsRuleFieldName,
+                                JavaType.buildType(
+                                        "org.jvnet.hudson.test.JenkinsRule"),
+                                null),
+                        Collections.emptyList(),
+                        null,
+                        null),
+                Space.EMPTY,
+                Markers.EMPTY))));
+methodDecl = methodDecl.withParameters(newParams);
                                     }
 
                                     return methodDecl;
