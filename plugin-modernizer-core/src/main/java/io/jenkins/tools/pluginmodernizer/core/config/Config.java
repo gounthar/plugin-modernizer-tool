@@ -10,6 +10,7 @@ public class Config {
 
     private static boolean DEBUG = false;
     private final boolean allowDeprecatedPlugins;
+    private final boolean noCompile;
 
     public static void setDebug(boolean debug) {
         DEBUG = debug;
@@ -57,7 +58,8 @@ public class Config {
             boolean dryRun,
             boolean draft,
             boolean removeForks,
-            boolean allowDeprecatedPlugins) {
+            boolean allowDeprecatedPlugins,
+            boolean noCompile) {
         this.version = version;
         this.githubOwner = githubOwner;
         this.githubAppId = githubAppId;
@@ -79,6 +81,7 @@ public class Config {
         this.draft = draft;
         this.removeForks = removeForks;
         this.allowDeprecatedPlugins = allowDeprecatedPlugins;
+        this.noCompile = noCompile;
     }
 
     public String getVersion() {
@@ -191,6 +194,10 @@ public class Config {
         return allowDeprecatedPlugins;
     }
 
+    public boolean isNoCompile() {
+        return noCompile;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -217,6 +224,7 @@ public class Config {
         private boolean draft = false;
         public boolean removeForks = false;
         private boolean allowDeprecatedPlugins = false;
+        private boolean noCompile = false;
 
         public Builder withVersion(String version) {
             this.version = version;
@@ -339,6 +347,11 @@ public class Config {
             return this;
         }
 
+        public Builder withNoCompile(boolean noCompile) {
+            this.noCompile = noCompile;
+            return this;
+        }
+
         public Config build() {
             return new Config(
                     version,
@@ -361,7 +374,8 @@ public class Config {
                     dryRun,
                     draft,
                     removeForks,
-                    allowDeprecatedPlugins);
+                    allowDeprecatedPlugins,
+                    noCompile);
         }
     }
 }

@@ -70,12 +70,13 @@ public class UpdateJenkinsfileForJavaVersionTest implements RewriteTest {
                         */
                         buildPlugin(
                           useContainerAgent: true,
-                          forkCount: '1C', // Set to `false` if you need to use Docker for containerized tests
-                          configurations: [
-                            [platform: 'linux', jdk: 17],
-                            [platform: 'windows', jdk: 17],
-                            [platform: 'linux', jdk: 25],
-                        ])
+forkCount: '1C', // run this number of tests in parallel for faster feedback.  If the number terminates with a 'C', the value will be multiplied by the number of available CPU cores
+  useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
+  configurations: [
+    [platform: 'linux', jdk: 17],
+    [platform: 'windows', jdk: 17],
+    [platform: 'linux', jdk: 25],
+])
                         """,
                         sourceSpecs -> sourceSpecs.path(ArchetypeCommonFile.JENKINSFILE.getPath())));
     }
@@ -164,8 +165,7 @@ public class UpdateJenkinsfileForJavaVersionTest implements RewriteTest {
                          https://github.com/jenkins-infra/pipeline-library/
                         */
                         buildPlugin(
-                          forkCount: '2C'
-                        , // run this number of tests in parallel for faster feedback.  If the number terminates with a 'C', the value will be multiplied by the number of available CPU cores
+                          forkCount: '2C', // run this number of tests in parallel for faster feedback.  If the number terminates with a 'C', the value will be multiplied by the number of available CPU cores
                           useContainerAgent: true, // Set to `false` if you need to use Docker for containerized tests
                           configurations: [
                             [platform: 'linux', jdk: 25],

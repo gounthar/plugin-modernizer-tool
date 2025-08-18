@@ -46,6 +46,11 @@ public class GlobalOptions implements IOption {
     private boolean allowDeprecatedPlugins = false;
 
     @CommandLine.Option(
+            names = {"--no-compile"},
+            description = "Skip compilation and verification steps.")
+    private boolean noCompile = false;
+
+    @CommandLine.Option(
             names = {"--cache-path"},
             description = "Path to the cache directory.")
     private Path cachePath = Settings.DEFAULT_CACHE_PATH;
@@ -73,7 +78,8 @@ public class GlobalOptions implements IOption {
                                 : cachePath)
                 .withMavenHome(mavenHome)
                 .withMavenLocalRepo(mavenLocalRepo)
-                .withAllowDeprecatedPlugins(allowDeprecatedPlugins);
+                .withAllowDeprecatedPlugins(allowDeprecatedPlugins)
+                .withNoCompile(noCompile);
     }
 
     /**
