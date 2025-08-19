@@ -1,0 +1,45 @@
+name: Update io.jenkins.tools.bom:bom-2.452.x version in UpdateBomTest.java
+
+scms:
+  default:
+    kind: github
+    spec:
+      user: '{{ .github.user }}'
+      email: '{{ .github.email }}'
+      owner: '{{ .github.owner }}'
+      repository: '{{ .github.repository }}'
+      token: '{{ requiredEnv .github.token }}'
+      username: '{{ .github.username }}'
+      branch: '{{ .github.branch }}'
+
+sources:
+  latestBomVersion:
+    kind: maven
+    spec:
+      repository: 'repo.jenkins-ci.org/releases'
+      groupid: 'io.jenkins.tools.bom'
+      artifactid: 'bom-2.452.x'
+
+targets:
+  updateBomVersionInTest:
+    name: 'Update io.jenkins.tools.bom:bom-2.452.x version in UpdateBomTest.java'
+    kind: file
+    spec:
+      file: "plugin-modernizer-core/src/test/java/io/jenkins/tools/pluginmodernizer/core/recipes/UpdateBomTest.java"
+      matchPattern: >-
+        (.*<artifactId>bom-2\.452\.x</artifactId>\s*<version>)([^<]+)(</version>)
+      replacePattern: >-
+        ${1}{{ source "latestBomVersion" }}${3}
+    sourceid: latestBomVersion
+    scmid: default
+
+actions:
+  createPullRequest:
+    kind: github/pullrequest
+    scmid: default
+    title: 'Update io.jenkins.tools.bom:bom-2.452.x version to {{ source "latestBomVersion" }}'
+    spec:
+      labels:
+        - dependencies
+        - updatecli
+# (\s*<groupId>io\.jenkins\.tools\\.bom</groupId>\s*<artifactId>bom-2\.452\.x</artifactId>\s*<version>)([^<]+)(</version>)
