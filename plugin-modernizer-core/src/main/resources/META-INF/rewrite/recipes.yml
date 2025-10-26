@@ -256,8 +256,8 @@ recipeList:
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: io.jenkins.tools.pluginmodernizer.UpgradeNextMajorParentVersion
-displayName: Upgrade to the next major parent version (5.X) requiring Jenkins 2.492 and Java 17
-description: Upgrade to the next major parent version (5.X) requiring Jenkins 2.492 and Java 17.
+displayName: Upgrade to the next major parent version (5.X) requiring Jenkins 2.504 and Java 17
+description: Upgrade to the next major parent version (5.X) requiring Jenkins 2.504 and Java 17.
 tags: ['dependencies']
 recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.EnsureRelativePath
@@ -265,9 +265,9 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpdateScmUrl
   - io.jenkins.tools.pluginmodernizer.UpgradeParent5Version
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsVersion:
-      minimumVersion: 2.492.3
+      minimumVersion: 2.504.3
   - io.jenkins.tools.pluginmodernizer.core.recipes.UpgradeJenkinsTestHarnessVersion:
-      jenkinsVersion: 2.492.3
+      jenkinsVersion: 2.504.3
   - org.openrewrite.java.ChangePackage:  #deprecating
       oldPackageName: com.gargoylesoftware.htmlunit
       newPackageName: org.htmlunit
@@ -402,7 +402,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: asm-api
-      pluginVersion: 9.8-163.vb_2a_96d3f9c3c
+      pluginVersion: 9.9-185.va_6c6b_3348b_c3
       replaces:
         - groupId: org.ow2.asm
           artifactId: asm
@@ -509,7 +509,7 @@ recipeList:
   - io.jenkins.tools.pluginmodernizer.core.recipes.ReplaceLibrariesWithApiPlugin:
       pluginGroupId: io.jenkins.plugins
       pluginArtifactId: byte-buddy-api
-      pluginVersion: 1.17.7-181.ve4f4387cb_a_86
+      pluginVersion: 1.17.8-195.v20ec6b_32a_e37
       replaces:
         - groupId: net.bytebuddy
           artifactId: byte-buddy

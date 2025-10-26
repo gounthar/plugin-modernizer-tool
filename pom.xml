@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.jenkins-ci</groupId>
     <artifactId>jenkins</artifactId>
-    <version>1.140</version>
+    <version>1.141</version>
     <relativePath />
   </parent>
 
@@ -46,34 +46,34 @@
     <spotless.check.skip>false</spotless.check.skip>
 
     <!-- Version -->
-    <jenkins.core.minimum.version>2.492.3</jenkins.core.minimum.version>
-    <openrewrite.bom.version>3.15.0</openrewrite.bom.version>
-    <openrewrite.maven.plugin.version>6.19.0</openrewrite.maven.plugin.version>
-    <micrometer.version>1.15.4</micrometer.version>
+    <jenkins.core.minimum.version>2.504.3</jenkins.core.minimum.version>
+    <openrewrite.bom.version>3.16.0</openrewrite.bom.version>
+    <openrewrite.maven.plugin.version>6.21.1</openrewrite.maven.plugin.version>
+    <micrometer.version>1.15.5</micrometer.version>
     <slf4j.version>2.0.17</slf4j.version>
-    <logback.version>1.5.18</logback.version>
+    <logback.version>1.5.20</logback.version>
     <picocli.version>4.7.6</picocli.version>
     <common.io.version>2.20.0</common.io.version>
     <common.lang3.version>3.19.0</common.lang3.version>
     <jackson.version>2.18.3</jackson.version>
     <common.text.version>1.14.0</common.text.version>
-    <asm.version>9.8</asm.version>
+    <asm.version>9.9</asm.version>
     <gson.version>2.13.2</gson.version>
     <jackson.version>2.17.3</jackson.version>
     <maven.version>3.9.11</maven.version>
     <commons-codec.version>1.19.0</commons-codec.version>
-    <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
+    <jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
     <jgit.version>7.4.0.202509020913-r</jgit.version>
     <github-api.version>2.0-rc.5</github-api.version>
     <commons-compress.version>1.28.0</commons-compress.version>
     <guava.version>33.5.0-jre</guava.version>
-    <byte-buddy.version>1.17.7</byte-buddy.version>
+    <byte-buddy.version>1.17.8</byte-buddy.version>
     <wiremock.version>3.13.1</wiremock.version>
     <jte.version>3.2.1</jte.version>
     <snakeyaml.version>2.5</snakeyaml.version>
     <guice.version>7.0.0</guice.version>
     <error.prone.version>2.42.0</error.prone.version>
-    <checker.qual.version>3.51.0</checker.qual.version>
+    <checker.qual.version>3.51.1</checker.qual.version>
     <jakarta.inject.version>2.0.1</jakarta.inject.version>
     <jwt.version>0.13.0</jwt.version>
     <bouncycastle.version>1.82</bouncycastle.version>
